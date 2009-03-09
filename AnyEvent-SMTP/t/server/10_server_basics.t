@@ -51,7 +51,13 @@ run(sub {
       connect_to('127.0.0.1', $cp,
         sub {
           ok(!$_[0], 'No longer listening');
-          $test_run->send;
+          
+          run(sub {
+            my $sess = $srv->sessions;
+            is(scalar(keys %$sess), 0);
+
+            $test_run->send;
+          });
         },
       );
     },

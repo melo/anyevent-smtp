@@ -79,7 +79,7 @@ sub _on_new_connection {
     port   => $port,
     banner => $self->domain,
   });
-  # $session->start($fh);
+  $session->start($fh);
   
   $self->sessions->{$session} = $session;
   

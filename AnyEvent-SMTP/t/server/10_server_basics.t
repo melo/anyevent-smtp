@@ -51,7 +51,6 @@ run(sub {
       like($_[1], qr/^220 example.com ESMTP/);
       undef $handle;
     });
-    $session->send(220, $srv->domain, 'ESMTP');
     
     run(sub {
       $srv->stop;

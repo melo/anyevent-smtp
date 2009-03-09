@@ -53,6 +53,7 @@ sub start {
   $self->handle($handle);
 
   $self->_start_read;  
+  $self->_send_banner;
   
   return;
 }
@@ -69,6 +70,15 @@ sub send {
 
 ##################
 # Internal methods
+
+sub _send_banner {
+  my ($self) = @_;
+  
+  $self->send(220, $self->banner, 'ESMTP');
+
+  return;
+}
+
 
 sub _on_disconnect {
   my ($self) = @_;

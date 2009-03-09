@@ -58,6 +58,15 @@ sub start {
 }
 
 
+sub send {
+  my $self = shift;
+  my $code = shift;
+  my $mesg = join(' ', $code, @_);
+  
+  $self->handle->push_write($mesg."\015\012");
+}
+
+
 ##################
 # Internal methods
 

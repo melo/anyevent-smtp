@@ -42,6 +42,17 @@ run(sub {
     is($host, '127.0.0.1');
     is($port, $cp);
     
+    my $handle; $handle = AnyEvent::Handle->new(
+      fh => $fh,
+      on_eof   => sub { undef $handle },
+      on_error => sub { undef $handle },
+    );
+    $handle->push_read( line => sub {
+      like($_[1], qr/^220 example.com ESMTP/);
+      undef $handle;
+    });
+    $session->send(220, $srv->domain, 'ESMTP');
+    
     run(sub {
       $srv->stop;
       ok(!defined($srv->server_guard));

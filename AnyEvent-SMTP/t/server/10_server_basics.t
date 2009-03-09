@@ -28,40 +28,37 @@ run(sub {
   
   my $cp = $srv->current_port;
   
-  connect_to('127.0.0.1', $cp,
-    sub {
-      my ($fh, $host, $port) = @_;
-      ok($_[0], 'Connected succesfully');
-
-      my $sess = $srv->sessions;
-      is(scalar(keys %$sess), 1);
-      
-      my ($session) = values(%$sess);
-      ok($session);
-      is($session->server, $srv);
-      
-      is($host, '127.0.0.1');
-      is($port, $cp);
-    },
-    sub {
+  connect_to('127.0.0.1', $cp, sub {
+    my ($fh, $host, $port) = @_;
+    ok($_[0], 'Connected succesfully');
+  
+    my $sess = $srv->sessions;
+    is(scalar(keys %$sess), 1);
+    
+    my ($session) = values(%$sess);
+    ok($session);
+    is($session->server, $srv);
+    
+    is($host, '127.0.0.1');
+    is($port, $cp);
+    
+    run(sub {
       $srv->stop;
       ok(!defined($srv->server_guard));
       ok(!defined($srv->current_port));
-
-      connect_to('127.0.0.1', $cp,
-        sub {
-          ok(!$_[0], 'No longer listening');
-          
-          run(sub {
-            my $sess = $srv->sessions;
-            is(scalar(keys %$sess), 0);
-
-            $test_run->send;
-          });
-        },
-      );
-    },
-  );
+  
+      connect_to('127.0.0.1', $cp, sub {
+        ok(!$_[0], 'No longer listening');
+        
+        run(sub {
+          my $sess = $srv->sessions;
+          is(scalar(keys %$sess), 0);
+        
+          $test_run->send;
+        });
+      });
+    });
+  });
 });
 
 
@@ -88,16 +85,6 @@ sub run {
 }
 
 sub connect_to {
-  my ($host, $port, $test, $next) = @_;
-  
-  tcp_connect(
-    $host, $port,
-    sub {
-      $test->(@_);
-      $next->() if $next;
-    },
-    sub { return 3 },
-  );
-  
-  return;
+  my ($host, $port, $cb) = @_;
+  return tcp_connect($host, $port, $cb, sub { return 3 });
 }

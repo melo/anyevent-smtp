@@ -34,6 +34,13 @@ has handle => (
   clearer => 'clear_handle',
 );
 
+has is_reading => (
+  isa => 'Bool',
+  is  => 'rw',  
+  default => 0,
+);
+
+
 
 sub start {
   my ($self, $fh) = @_;
@@ -44,8 +51,8 @@ sub start {
     on_error => sub { $self->_on_disconnect($_[1]) },
   );
   $self->handle($handle);
-  
-  $handle->push_read(line => sub { });
+
+  $self->_start_read;  
   
   return;
 }
@@ -59,6 +66,32 @@ sub _on_disconnect {
   
   $self->clear_handle;
   $self->server->_on_session_ended($self);
+  
+  return;
+}
+
+sub _start_read {
+  my ($self) = @_;
+  
+  return if $self->is_reading;
+  $self->is_reading(1);
+  
+  $self->handle->push_read( line => sub {
+    $self->_on_read($_[1]);
+  });
+
+  return;
+}
+
+
+sub _on_read {
+  my ($self, $data) = @_;
+  $self->is_reading(0);
+  
+  # Process $data...
+  
+  # And keep on reading
+  $self->_start_read;
   
   return;
 }

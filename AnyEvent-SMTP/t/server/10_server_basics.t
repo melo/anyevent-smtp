@@ -19,16 +19,29 @@ run(sub {
   ok($srv);
   ok(!defined($srv->server_guard));
   ok(!defined($srv->current_port));
+  is(scalar(%{$srv->sessions}), 0);
   
   $srv->start;
   ok(defined($srv->server_guard));
   ok(defined($srv->current_port));
+  is(scalar(%{$srv->sessions}), 0);
   
   my $cp = $srv->current_port;
   
   connect_to('127.0.0.1', $cp,
     sub {
+      my ($fh, $host, $port) = @_;
       ok($_[0], 'Connected succesfully');
+
+      my $sess = $srv->sessions;
+      is(scalar(keys %$sess), 1);
+      
+      my ($session) = values(%$sess);
+      ok($session);
+      is($session->server, $srv);
+      
+      is($host, '127.0.0.1');
+      is($port, $cp);
     },
     sub {
       $srv->stop;

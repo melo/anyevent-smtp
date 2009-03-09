@@ -3,6 +3,7 @@ package AnyEvent::SMTP::Server;
 use Mouse;
 use AnyEvent;
 use AnyEvent::Socket;
+use AnyEvent::SMTP::Session;
 
 has 'port' => (
   isa => 'Str',
@@ -28,6 +29,17 @@ has 'server_guard' => (
   clearer => 'clear_server_guard',
 );
 
+has 'sessions' => (
+  isa => 'HashRef',
+  is  => 'ro',
+  default => sub { {} },
+);
+
+has session_class => (
+  isa => 'Str',
+  is  => 'rw',  
+  default => 'AnyEvent::SMTP::Session',
+);
 
 
 sub start {
@@ -36,7 +48,7 @@ sub start {
   my $guard = tcp_server(
     undef,
     $self->port,
-    sub {  },
+    sub { return $self->_on_new_connection(@_) },
     sub { $self->current_port($_[2]); return 0 },
   );
   
@@ -52,6 +64,32 @@ sub stop {
   $self->clear_current_port;
   
   return;
+}
+
+
+##################
+# Internal methods
+
+sub _on_new_connection {
+  my ($self, $fh, $host, $port) = @_;
+
+  my $session = $self->session_class->new({
+    server => $self,
+    host   => $host,
+    port   => $port,
+    banner => $self->domain,
+  });
+  # $session->start($fh);
+  
+  $self->sessions->{$session} = $session;
+  
+  return;
+}
+
+sub _on_session_ended {
+  my ($self, $session) = @_;
+  
+  return delete $self->sessions->{$session};
 }
 
 

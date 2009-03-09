@@ -12,6 +12,7 @@ has 'port' => (
 has 'current_port' => (
   isa => 'Num',
   is  => 'rw',
+  clearer => 'clear_current_port',
 );
 
 has 'domain' => (
@@ -21,6 +22,37 @@ has 'domain' => (
   default  => 'example.com',
 );
 
+has 'server_guard' => (
+  isa => 'Object',
+  is  => 'rw',
+  clearer => 'clear_server_guard',
+);
+
+
+
+sub start {
+  my ($self) = @_;
+
+  my $guard = tcp_server(
+    undef,
+    $self->port,
+    sub {  },
+    sub { $self->current_port($_[2]); return 0 },
+  );
+  
+  $self->server_guard($guard);
+  
+  return;
+}
+
+sub stop {
+  my ($self) = @_;
+  
+  $self->clear_server_guard;
+  $self->clear_current_port;
+  
+  return;
+}
 
 
 no Mouse;

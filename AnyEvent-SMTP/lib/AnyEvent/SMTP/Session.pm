@@ -83,8 +83,11 @@ sub _send_banner {
   confess("_send_banner() only valid if state is 'before-banner', current is '$state', ")
     unless $state eq 'before-banner';
 
-  $self->send(220, $self->banner, 'ESMTP');
-  $self->state('wait-for-ehlo');
+  my $t; $t = AnyEvent->timer( after => 2.0, cb => sub {
+    $self->send(220, $self->banner, 'ESMTP');
+    $self->state('wait-for-ehlo');
+    undef $t;
+  });
 
   return;
 }

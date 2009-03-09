@@ -39,7 +39,7 @@ run(sub {
     my ($session) = values(%$sess);
     ok($session);
     is($session->server, $srv);
-    is($session->state, 'wait-for-ehlo');
+    is($session->state, 'before-banner');
 
     is($host, '127.0.0.1');
     is($port, $cp);
@@ -51,6 +51,7 @@ run(sub {
     );
     $handle->push_read( line => sub {
       like($_[1], qr/^220 example.com ESMTP/);
+      is($session->state, 'wait-for-ehlo');
 
       throws_ok(
         sub { $session->_send_banner },
@@ -58,22 +59,23 @@ run(sub {
         'Too late for _send_banner() call',
       );
 
+      # Close the connection
       undef $handle;
-    });
 
-    run(sub {
-      $srv->stop;
-      ok(!defined($srv->server_guard));
-      ok(!defined($srv->current_port));
+      run(sub {
+        $srv->stop;
+        ok(!defined($srv->server_guard));
+        ok(!defined($srv->current_port));
 
-      connect_to('127.0.0.1', $cp, sub {
-        ok(!$_[0], 'No longer listening');
+        connect_to('127.0.0.1', $cp, sub {
+          ok(!$_[0], 'No longer listening');
 
-        run(sub {
-          my $sess = $srv->sessions;
-          is(scalar(keys %$sess), 0);
+          run(sub {
+            my $sess = $srv->sessions;
+            is(scalar(keys %$sess), 0);
 
-          $test_run->send;
+            $test_run->send;
+          });
         });
       });
     });

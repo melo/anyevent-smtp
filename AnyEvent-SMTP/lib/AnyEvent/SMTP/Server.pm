@@ -37,7 +37,7 @@ has 'sessions' => (
 
 has session_class => (
   isa => 'Str',
-  is  => 'rw',  
+  is  => 'rw',
   default => 'AnyEvent::SMTP::Session',
 );
 
@@ -51,18 +51,18 @@ sub start {
     sub { return $self->_on_new_connection(@_) },
     sub { $self->current_port($_[2]); return 0 },
   );
-  
+
   $self->server_guard($guard);
-  
+
   return;
 }
 
 sub stop {
   my ($self) = @_;
-  
+
   $self->clear_server_guard;
   $self->clear_current_port;
-  
+
   return;
 }
 
@@ -80,15 +80,15 @@ sub _on_new_connection {
     banner => $self->domain,
   });
   $session->start($fh);
-  
+
   $self->sessions->{$session} = $session;
-  
+
   return;
 }
 
 sub _on_session_ended {
   my ($self, $session) = @_;
-  
+
   return delete $self->sessions->{$session};
 }
 

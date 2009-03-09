@@ -40,6 +40,11 @@ has is_reading => (
   default => 0,
 );
 
+has state => (
+  isa => 'Str',
+  is  => 'rw',
+  default => 'before-banner',
+);
 
 
 sub start {
@@ -73,8 +78,13 @@ sub send {
 
 sub _send_banner {
   my ($self) = @_;
+  my $state = $self->state;
+
+  confess("_send_banner() only valid if state is 'before-banner', current is '$state', ")
+    unless $state eq 'before-banner';
 
   $self->send(220, $self->banner, 'ESMTP');
+  $self->state('wait-for-ehlo');
 
   return;
 }

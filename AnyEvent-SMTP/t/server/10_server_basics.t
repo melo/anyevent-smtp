@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 use Test::More 'no_plan';
+use Test::Exception;
 
 use AnyEvent;
 use AnyEvent::SMTP::Server;
@@ -38,6 +39,7 @@ run(sub {
     my ($session) = values(%$sess);
     ok($session);
     is($session->server, $srv);
+    is($session->state, 'wait-for-ehlo');
 
     is($host, '127.0.0.1');
     is($port, $cp);
@@ -49,6 +51,13 @@ run(sub {
     );
     $handle->push_read( line => sub {
       like($_[1], qr/^220 example.com ESMTP/);
+
+      throws_ok(
+        sub { $session->_send_banner },
+        qr{_send_banner.+'before-banner'.+'wait-for-ehlo'},
+        'Too late for _send_banner() call',
+      );
+
       undef $handle;
     });
 

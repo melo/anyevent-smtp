@@ -11,6 +11,7 @@ requires 'AnyEvent::Handle' => 0;
 requires 'AnyEvent::Socket' => 0;
 
 build_requires 'Test::More';
+build_requires 'Test::Exception';
 
 auto_install;
 

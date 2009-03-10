@@ -1,4 +1,4 @@
-package AnyEvent::SMTP::Session;
+package AnyEvent::SMTP::Server::Session;
 
 use Mouse;
 use AnyEvent::Handle;
@@ -120,7 +120,7 @@ sub _on_read {
   my ($self, $data) = @_;
   $self->is_reading(0);
 
-  # Process $data...
+  $self->_parse_command($data);
 
   # And keep on reading
   $self->_start_read;

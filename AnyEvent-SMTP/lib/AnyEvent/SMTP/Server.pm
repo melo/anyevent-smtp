@@ -3,7 +3,7 @@ package AnyEvent::SMTP::Server;
 use Mouse;
 use AnyEvent;
 use AnyEvent::Socket;
-use AnyEvent::SMTP::Session;
+use AnyEvent::SMTP::Server::Session;
 
 has 'port' => (
   isa => 'Str',
@@ -38,7 +38,7 @@ has 'sessions' => (
 has session_class => (
   isa => 'Str',
   is  => 'rw',
-  default => 'AnyEvent::SMTP::Session',
+  default => 'AnyEvent::SMTP::Server::Session',
 );
 
 

@@ -28,6 +28,7 @@ run(sub {
   is(scalar(%{$srv->sessions}), 0);
 
   my $cp = $srv->current_port;
+  diag("Server running at port ".$srv->current_port);
 
   connect_to('127.0.0.1', $cp, sub {
     my ($fh, $host, $port) = @_;

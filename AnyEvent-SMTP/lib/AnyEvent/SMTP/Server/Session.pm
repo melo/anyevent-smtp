@@ -69,12 +69,57 @@ sub send {
   my $code = shift;
   my $mesg = join(' ', $code, @_);
 
+  my $handle = $self->handle;
+  return unless $handle;
+
   $self->handle->push_write($mesg."\015\012");
+}
+
+
+sub disconnect {
+  my ($self, $code, @mesg) = @_;
+
+  $self->send($code, @mesg);
+
+  $self->handle->on_drain(sub {
+    $self->clear_handle;
+  });
+
+  return;
 }
 
 
 ##################
 # Internal methods
+
+sub _parse_command {
+  my ($self, $data) = @_;
+
+  # detect early-talkers
+  # rfc5321, 4.3.1, par 1 (SHOULD)
+  if ($self->state eq 'before-banner') {
+    $self->disconnect('554', 'Earlytalkers not welcome here');
+    return;
+  }
+
+  # Accept \s+ with empty params, rfc5321, 4.1.1, par 1 (SHOULD)
+  my ($cmd, $rest) = $data =~ /^(\w{1,12})(?:\s+(.*))?$/;
+  if (!$cmd) {
+    $self->send('550', 'Command not recognized');
+    return;
+  }
+
+  my $ncmd = uc($cmd);
+  if ($ncmd eq 'QUIT') {
+    $self->disconnect('221', 'Bye');
+  }
+  else {
+    $self->send('550', 'Command not recognized');
+  }
+
+  return;
+}
+
 
 sub _send_banner {
   my ($self) = @_;
@@ -105,6 +150,7 @@ sub _on_disconnect {
 sub _start_read {
   my ($self) = @_;
 
+  return unless $self->handle;
   return if $self->is_reading;
   $self->is_reading(1);
 

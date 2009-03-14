@@ -5,6 +5,7 @@ README
 lib/AnyEvent/SMTP.pm
 lib/AnyEvent/SMTP/Server.pm
 lib/AnyEvent/SMTP/Server/Session.pm
+lib/AnyEvent/SMTP/Server/Transaction.pm
 t/00-load.t
 t/pod-coverage.t
 t/pod.t

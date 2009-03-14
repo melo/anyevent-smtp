@@ -92,6 +92,7 @@ sub disconnect {
 ##################
 # Internal methods
 
+### SMTP command parser
 sub _parse_command {
   my ($self, $data) = @_;
 
@@ -121,6 +122,7 @@ sub _parse_command {
 }
 
 
+### Banner methods
 sub _send_banner {
   my ($self) = @_;
   my $state = $self->state;
@@ -138,6 +140,7 @@ sub _send_banner {
 }
 
 
+### EOF management
 sub _on_disconnect {
   my ($self) = @_;
 
@@ -147,6 +150,8 @@ sub _on_disconnect {
   return;
 }
 
+
+### read-queue management
 sub _start_read {
   my ($self) = @_;
 
@@ -160,7 +165,6 @@ sub _start_read {
 
   return;
 }
-
 
 sub _on_read {
   my ($self, $data) = @_;

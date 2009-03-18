@@ -4,12 +4,14 @@ use Mouse;
 use AnyEvent::Handle;
 
 
+# our server
 has server => (
   isa => 'AnyEvent::SMTP::Server',
   is  => 'ro',
   required => 1,
 );
 
+# host/port of the peer
 has host => (
   isa => 'Str',
   is  => 'ro',
@@ -22,24 +24,28 @@ has port => (
   required => 1,
 );
 
+# extra banner stuff to send
 has banner => (
   isa => 'Str',
   is  => 'rw',
   required => 1,
 );
 
+# our internal handle for sock operations
 has handle => (
   isa => 'AnyEvent::Handle',
   is  => 'rw',
   clearer => 'clear_handle',
 );
 
+# manage read queue
 has is_reading => (
   isa => 'Bool',
   is  => 'rw',
   default => 0,
 );
 
+# where are we now?
 has state => (
   isa => 'Str',
   is  => 'rw',

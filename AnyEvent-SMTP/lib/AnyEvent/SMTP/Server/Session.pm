@@ -58,6 +58,18 @@ has transaction => (
   clearer => 'reset_transaction',
 );
 
+# helo type and identification
+has ehlo_type => (
+  isa => 'Str',
+  is  => 'rw',
+);
+
+has ehlo_host => (
+  isa => 'Str',
+  is  => 'rw',
+);
+
+
 sub start {
   my ($self, $fh) = @_;
 
@@ -131,6 +143,9 @@ sub _parse_command {
   if ($ncmd eq 'QUIT') {
     $self->disconnect('221', 'Bye');
   }
+  elsif ($ncmd eq 'EHLO' || $ncmd eq 'HELO') {
+    $self->_ehlo_cmd($ncmd, $rest);
+  }
   else {
     $self->send('550', 'Command not recognized');
   }
@@ -143,6 +158,31 @@ sub _parse_arguments {
   $rest =~ s/\s+$//;
 
   return split(/\s+/, $rest);
+}
+
+
+### SMTP Commmands
+sub _ehlo_cmd {
+  my ($self, $type, $rest) = @_;
+  my ($host) = $self->_parse_arguments($rest);
+
+  $self->reset_transaction;
+  
+  return $self->send('501', "$type requires domain/address - see rfc5321, section 4.1.1.1")
+    unless $host;
+
+  $self->ehlo_type($type);
+  $self->ehlo_host($host);
+  
+  my @response = (
+    '250',
+    [$self->server->domain, 'Welcome,', $self->host ],
+  );
+  
+  push @response, qw( PIPELINE 8BITMIME )
+    if $type eq 'EHLO';
+
+  return $self->send(@response);
 }
 
 

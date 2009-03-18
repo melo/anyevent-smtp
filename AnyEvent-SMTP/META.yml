@@ -3,6 +3,7 @@ abstract: 'The great new AnyEvent::SMTP!'
 author:
   - 'Pedro Melo <melo@cpan.org>'
 build_requires:
+  Test::Deep: 0
   Test::Exception: 0
   Test::More: 0
 distribution_type: module

@@ -132,6 +132,13 @@ sub _parse_command {
   return;
 }
 
+sub _parse_arguments {
+  my ($self, $rest) = @_;
+  $rest =~ s/\s+$//;
+
+  return split(/\s+/, $rest);
+}
+
 
 ### Banner methods
 sub _send_banner {

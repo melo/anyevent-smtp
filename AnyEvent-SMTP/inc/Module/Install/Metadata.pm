@@ -6,7 +6,7 @@ use Module::Install::Base;
 
 use vars qw{$VERSION $ISCORE @ISA};
 BEGIN {
-	$VERSION = '0.76';
+	$VERSION = '0.79';
 	$ISCORE  = 1;
 	@ISA     = qw{Module::Install::Base};
 }
@@ -175,13 +175,16 @@ sub perl_version {
 	my $version = shift or die(
 		"Did not provide a value to perl_version()"
 	);
-	$version =~ s/_.+$//;
-	$version = $version + 0; # Numify
+
+	# Normalize the version
+	$version = $self->_perl_version($version);
+
+	# We don't support the reall old versions
 	unless ( $version >= 5.005 ) {
 		die "Module::Install only supports 5.005 or newer (use ExtUtils::MakeMaker)\n";
 	}
+
 	$self->{values}{perl_version} = $version;
-	return 1;
 }
 
 sub license {
@@ -212,6 +215,9 @@ sub all_from {
 		unless ( -e $file ) {
 			die("all_from cannot find $file from $name");
 		}
+	}
+	unless ( -f $file ) {
+		die("The path '$file' does not exist, or is not a file");
 	}
 
 	# Some methods pull from POD instead of code.
@@ -424,8 +430,12 @@ sub license_from {
 		my $license_text = $1;
 		my @phrases      = (
 			'under the same (?:terms|license) as perl itself' => 'perl',        1,
+			'GNU general public license'                      => 'gpl',         1,
 			'GNU public license'                              => 'gpl',         1,
+			'GNU lesser general public license'               => 'lgpl',        1,
 			'GNU lesser public license'                       => 'lgpl',        1,
+			'GNU library general public license'              => 'lgpl',        1,
+			'GNU library public license'                      => 'lgpl',        1,
 			'BSD license'                                     => 'bsd',         1,
 			'Artistic license'                                => 'artistic',    1,
 			'GPL'                                             => 'gpl',         1,
@@ -438,9 +448,6 @@ sub license_from {
 		while ( my ($pattern, $license, $osi) = splice(@phrases, 0, 3) ) {
 			$pattern =~ s{\s+}{\\s+}g;
 			if ( $license_text =~ /\b$pattern\b/i ) {
-				if ( $osi and $license_text =~ /All rights reserved/i ) {
-					print "WARNING: 'All rights reserved' in copyright may invalidate Open Source license.\n";
-				}
 				$self->license($license);
 				return 1;
 			}
@@ -469,19 +476,70 @@ sub bugtracker_from {
 	return 1;
 }
 
-sub install_script {
-	my $self = shift;
-	my $args = $self->makemaker_args;
-	my $exe  = $args->{EXE_FILES} ||= [];
-        foreach ( @_ ) {
-		if ( -f $_ ) {
-			push @$exe, $_;
-		} elsif ( -d 'script' and -f "script/$_" ) {
-			push @$exe, "script/$_";
-		} else {
-			die("Cannot find script '$_'");
-		}
+# Convert triple-part versions (eg, 5.6.1 or 5.8.9) to
+# numbers (eg, 5.006001 or 5.008009).
+# Also, convert double-part versions (eg, 5.8)
+sub _perl_version {
+	my $v = $_[-1];
+	$v =~ s/^([1-9])\.([1-9]\d?\d?)$/sprintf("%d.%03d",$1,$2)/e;	
+	$v =~ s/^([1-9])\.([1-9]\d?\d?)\.(0|[1-9]\d?\d?)$/sprintf("%d.%03d%03d",$1,$2,$3 || 0)/e;
+	$v =~ s/(\.\d\d\d)000$/$1/;
+	$v =~ s/_.+$//;
+	if ( ref($v) ) {
+		$v = $v + 0; # Numify
 	}
+	return $v;
+}
+
+
+
+
+
+######################################################################
+# MYMETA.yml Support
+
+sub WriteMyMeta {
+	$_[0]->write_mymeta;
+}
+
+sub write_mymeta {
+	my $self = shift;
+	
+	# If there's no existing META.yml there is nothing we can do
+	return unless -f 'META.yml';
+
+	# Merge the perl version into the dependencies
+	my $val  = $self->Meta->{values};
+	my $perl = delete $val->{perl_version};
+	if ( $perl ) {
+		$val->{requires} ||= [];
+		my $requires = $val->{requires};
+
+		# Canonize to three-dot version after Perl 5.6
+		if ( $perl >= 5.006 ) {
+			$perl =~ s{^(\d+)\.(\d\d\d)(\d*)}{join('.', $1, int($2||0), int($3||0))}e
+		}
+		unshift @$requires, [ perl => $perl ];
+	}
+
+	# Load the advisory META.yml file
+	require YAML::Tiny;
+	my @yaml = YAML::Tiny::LoadFile('META.yml');
+	my $meta = $yaml[0];
+
+	# Overwrite the non-configure dependency hashs
+	delete $meta->{requires};
+	delete $meta->{build_requires};
+	delete $meta->{recommends};
+	if ( exists $val->{requires} ) {
+		$meta->{requires} = { map { @$_ } @{ $val->{requires} } };
+	}
+	if ( exists $val->{build_requires} ) {
+		$meta->{build_requires} = { map { @$_ } @{ $val->{build_requires} } };
+	}
+
+	# Save as the MYMETA.yml file
+	YAML::Tiny::DumpFile('MYMETA.yml', $meta);
 }
 
 1;

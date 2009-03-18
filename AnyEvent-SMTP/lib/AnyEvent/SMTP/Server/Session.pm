@@ -2,7 +2,7 @@ package AnyEvent::SMTP::Server::Session;
 
 use Mouse;
 use AnyEvent::Handle;
-
+use AnyEvent::SMTP::Server::Transaction;
 
 # our server
 has server => (
@@ -51,6 +51,12 @@ has state => (
   default => 'before-banner',
 );
 
+# the current active transaction
+has transaction => (
+  isa => 'AnyEvent::SMTP::Server::Transaction',
+  is  => 'rw',
+  clearer => 'reset_transaction',
+);
 
 sub start {
   my ($self, $fh) = @_;
@@ -137,6 +143,17 @@ sub _parse_arguments {
   $rest =~ s/\s+$//;
 
   return split(/\s+/, $rest);
+}
+
+
+### SMTP transaction
+sub _start_transaction {
+  my ($self) = @_;
+
+  my $t = AnyEvent::SMTP::Server::Transaction->new;
+  $self->transaction($t);
+
+  return $t;
 }
 
 

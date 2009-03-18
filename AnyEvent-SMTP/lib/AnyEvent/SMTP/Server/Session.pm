@@ -28,7 +28,6 @@ has port => (
 has banner => (
   isa => 'Str',
   is  => 'rw',
-  required => 1,
 );
 
 # our internal handle for sock operations

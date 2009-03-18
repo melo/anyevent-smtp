@@ -67,12 +67,18 @@ sub start {
 sub send {
   my $self = shift;
   my $code = shift;
-  my $mesg = join(' ', $code, @_);
 
   my $handle = $self->handle;
   return unless $handle;
 
-  $self->handle->push_write($mesg."\015\012");
+  my $response = '';
+  while (@_) {
+    my $line = shift;
+    $line = join(' ', @$line) if ref($line) eq 'ARRAY';
+    $response .= $code . (@_? '-' : ' ') . $line . "\015\012";
+  }
+
+  $self->handle->push_write($response);
 }
 
 
@@ -131,7 +137,7 @@ sub _send_banner {
     unless $state eq 'before-banner';
 
   my $t; $t = AnyEvent->timer( after => 2.0, cb => sub {
-    $self->send(220, $self->banner, 'ESMTP');
+    $self->send(220, [$self->server->domain, 'ESMTP', $self->banner]);
     $self->state('wait-for-ehlo');
     undef $t;
   });

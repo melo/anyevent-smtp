@@ -77,7 +77,6 @@ sub _on_new_connection {
     server => $self,
     host   => $host,
     port   => $port,
-    banner => $self->domain,
   });
   $session->start($fh);
 

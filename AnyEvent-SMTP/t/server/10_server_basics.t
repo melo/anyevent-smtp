@@ -51,7 +51,7 @@ run(sub {
       on_error => sub { undef $handle },
     );
     $handle->push_read( line => sub {
-      like($_[1], qr/^220 example.com ESMTP/);
+      like($_[1], qr{^220 example.com ESMTP$});
       is($session->state, 'wait-for-ehlo');
 
       throws_ok(

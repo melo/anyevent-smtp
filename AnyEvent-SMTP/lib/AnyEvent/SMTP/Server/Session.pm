@@ -206,7 +206,9 @@ sub _send_banner {
     unless $state eq 'before-banner';
 
   my $t; $t = AnyEvent->timer( after => 2.0, cb => sub {
-    $self->send(220, [$self->server->domain, 'ESMTP', $self->banner]);
+    my @banner = ($self->server->domain, 'ESMTP');
+    push @banner, $self->banner if $self->banner;
+    $self->send(220, \@banner);
     $self->state('wait-for-ehlo');
     undef $t;
   });

@@ -163,6 +163,31 @@ sub _parse_arguments {
   return split(/\s+/, $rest);
 }
 
+sub _parse_mail_address {
+  my ($self, $args) = @_;
+  
+  my $addr = shift @$args;
+  return unless $addr;
+  
+  # TODO: validate and canonify address
+  $addr =~ s/^<(.*)>$/$1/;
+
+  return $addr;
+}
+
+sub _parse_extensions {
+  my ($self, $args) = @_;
+  
+  my %exts;
+  foreach my $ext (@$args) {
+    my ($key, $value) = $ext =~ /^([^=]+)(?:=(.+))?$/;
+    return unless $key;
+    $exts{$key} = $value;
+  }
+  
+  return \%exts;
+}
+
 
 ### SMTP Commmands
 sub _ehlo_cmd {

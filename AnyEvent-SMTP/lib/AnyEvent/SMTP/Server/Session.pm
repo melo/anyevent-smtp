@@ -149,6 +149,9 @@ sub _parse_command {
   elsif ($ncmd eq 'EHLO' || $ncmd eq 'HELO') {
     $self->_ehlo_cmd($ncmd, $rest);
   }
+  elsif ($ncmd eq 'MAIL') {
+    $self->_mail_from_cmd($ncmd, $rest);
+  }
   else {
     $self->_err_500_command_unknown;
   }
@@ -213,6 +216,35 @@ sub _ehlo_cmd {
   return $self->send(@response);
 }
 
+sub _mail_from_cmd {
+  my ($self, $ncmd, $rest) = @_;
+  my $srv = $self->server;
+
+  # A MAIL command starts a new transaction, rfc5321, section 4.1.1.2, para 1 
+  $self->reset_transaction;
+
+  return $self->_err_501_syntax_error('missing from') unless $rest =~ s/^from:\s*//i;
+  
+  my @args = $self->_parse_arguments($rest);
+  my $rev_path = $self->_parse_mail_address(\@args);
+  my $exts = $self->_parse_extensions(\@args);
+  
+  return $self->_err_501_syntax_error('invalid reverse path')
+    unless defined $rev_path;
+  return $self->_err_501_syntax_error('error parsing extensions')
+    unless defined $exts;
+  
+  $self->transaction->reverse_path($rev_path);
+  # TODO: mix $ext with $rev_path as soon as we get a proper ::Address object
+  
+  my $done;
+  if (my $cb = $srv->on_mail_from) {
+    $done = $cb->($self, $rev_path, $exts);
+  }
+  
+  return if $done;
+  return $self->_ok_250;
+}
 
 ### OK/Error standard responses
 sub _ok_250 {

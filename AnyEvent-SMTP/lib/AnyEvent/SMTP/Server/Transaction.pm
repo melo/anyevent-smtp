@@ -8,6 +8,10 @@ has session => (
   required => 1,
 );
 
+has reverse_path => (
+  isa => 'Str',
+  is  => 'rw',
+);
 
 no Mouse;
 __PACKAGE__->meta->make_immutable;

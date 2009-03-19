@@ -41,6 +41,12 @@ has session_class => (
   default => 'AnyEvent::SMTP::Server::Session',
 );
 
+# callbacks
+has on_mail_from => (
+  isa => 'CodeRef',
+  is  => 'rw',
+);
+
 
 sub start {
   my ($self) = @_;

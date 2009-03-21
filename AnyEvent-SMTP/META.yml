@@ -21,6 +21,7 @@ requires:
   AnyEvent: 0
   AnyEvent::Handle: 0
   AnyEvent::Socket: 0
+  Async::Hooks: 0
   Mouse: 0
 resources:
   license: http://dev.perl.org/licenses/

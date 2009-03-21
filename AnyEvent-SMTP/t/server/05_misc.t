@@ -75,3 +75,7 @@ foreach my $tc (@extenions_test_cases) {
     "extension parser for '$tc->{in}'",
   );
 }
+
+### Support for the new Async::Hooks support
+isa_ok($srv->hooks, 'Async::Hooks');
+can_ok($srv, qw( call hook ));

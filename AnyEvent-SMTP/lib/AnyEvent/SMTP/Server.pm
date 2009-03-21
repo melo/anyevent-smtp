@@ -4,6 +4,7 @@ use Mouse;
 use AnyEvent;
 use AnyEvent::Socket;
 use AnyEvent::SMTP::Server::Session;
+use Async::Hooks;
 
 has 'port' => (
   isa => 'Str',
@@ -45,6 +46,14 @@ has session_class => (
 has on_mail_from => (
   isa => 'CodeRef',
   is  => 'rw',
+);
+
+# hooks
+has hooks => (
+  isa => 'Async::Hooks',
+  is  => 'ro',
+  default => sub { Async::Hooks->new },
+  handles => [qw( call hook )],
 );
 
 

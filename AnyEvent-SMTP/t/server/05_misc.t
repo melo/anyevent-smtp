@@ -79,3 +79,30 @@ foreach my $tc (@extenions_test_cases) {
 ### Support for the new Async::Hooks support
 isa_ok($srv->hooks, 'Async::Hooks');
 can_ok($srv, qw( call hook ));
+
+my $test_hook_srv  = 0;
+my $test_hook_sess = 0;
+$srv->hook('test', sub {
+  my ($ctl) = @_;
+  $test_hook_srv++;
+  $ctl->next;
+});
+$sess->hook('test', sub {
+  my ($ctl) = @_;
+  $test_hook_sess++;
+  $ctl->next;
+});
+
+$srv->call('test');
+is($test_hook_srv,  1);
+is($test_hook_sess, 1);
+
+$sess->call('test');
+is($test_hook_srv,  2);
+is($test_hook_sess, 2);
+
+
+### Parser support
+can_ok($srv, qw( parser_class parser ));
+my $parser = $srv->parser;
+can_ok($parser, qw( server ));

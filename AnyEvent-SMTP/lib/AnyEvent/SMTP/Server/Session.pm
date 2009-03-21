@@ -9,6 +9,7 @@ has server => (
   isa => 'AnyEvent::SMTP::Server',
   is  => 'ro',
   required => 1,
+  handles => [qw( call hook )],
 );
 
 # host/port of the peer

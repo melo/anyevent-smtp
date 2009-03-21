@@ -6,6 +6,7 @@ has server => (
   isa => 'AnyEvent::SMTP::Server',
   is  => 'ro',
   required => 1,
+  handles => [qw( hook call )],
 );
 
 ### SMTP command parser

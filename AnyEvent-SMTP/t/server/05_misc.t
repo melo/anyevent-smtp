@@ -83,31 +83,51 @@ foreach my $tc (@extenions_test_cases) {
 isa_ok($srv->hooks, 'Async::Hooks');
 can_ok($srv, qw( call hook ));
 
-my $test_hook_srv  = 0;
-my $test_hook_sess = 0;
+my %called;
 $srv->hook('test', sub {
   my ($ctl) = @_;
-  $test_hook_srv++;
+  $called{server}++;
   $ctl->next;
 });
 $sess->hook('test', sub {
   my ($ctl) = @_;
-  $test_hook_sess++;
+  $called{session}++;
+  $ctl->next;
+});
+$parser->hook('test', sub {
+  my ($ctl) = @_;
+  $called{parser}++;
   $ctl->next;
 });
 
+%called = ();
 $srv->call('test');
-is($test_hook_srv,  1);
-is($test_hook_sess, 1);
+cmp_deeply(
+  \%called,
+  { server => 1, session => 1, parser => 1},
+  'callig hook on server, ok',
+);
 
+%called = ();
 $sess->call('test');
-is($test_hook_srv,  2);
-is($test_hook_sess, 2);
+cmp_deeply(
+  \%called,
+  { server => 1, session => 1, parser => 1},
+  'callig hook on session, ok',
+);
+
+%called = ();
+$parser->call('test');
+cmp_deeply(
+  \%called,
+  { server => 1, session => 1, parser => 1},
+  'callig hook on parser, ok',
+);
 
 
 ### Parser support
 can_ok($srv, qw( parser_class parser ));
-can_ok($parser, qw( server ));
+can_ok($parser, qw( server hook call ));
 
 
 ### send() tests

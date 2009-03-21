@@ -150,7 +150,7 @@ sub _parse_command {
     $self->_ehlo_cmd($ncmd, $rest);
   }
   else {
-    $self->send('550', 'Command not recognized');
+    $self->_err_500_command_unknown;
   }
 
   return;
@@ -170,22 +170,36 @@ sub _ehlo_cmd {
   my ($host) = $self->_parse_arguments($rest);
 
   $self->reset_transaction;
-  
-  return $self->send('501', "$type requires domain/address - see rfc5321, section 4.1.1.1")
+
+  return $self->_err_501_syntax_error("$type requires domain/address - see rfc5321, section 4.1.1.1")
     unless $host;
 
   $self->ehlo_type($type);
   $self->ehlo_host($host);
-  
+
   my @response = (
     '250',
     [$self->server->domain, 'Welcome,', $self->host ],
   );
-  
+
   push @response, qw( PIPELINE 8BITMIME )
     if $type eq 'EHLO';
 
   return $self->send(@response);
+}
+
+
+### OK/Error standard responses
+sub _ok_250 {
+  return $_[0]->send('250', 'Ok');
+}
+
+sub _err_500_command_unknown {
+  return $_[0]->send('500', 'Command unrecognized');
+}
+
+sub _err_501_syntax_error {
+  return $_[0]->send('501', $_[1] || 'Syntax error');
 }
 
 

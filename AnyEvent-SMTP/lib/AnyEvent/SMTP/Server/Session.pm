@@ -125,78 +125,10 @@ sub disconnect {
 ##################
 # Internal methods
 
-### SMTP command parser
-sub _parse_command {
-  my ($self, $data) = @_;
-
-  # detect early-talkers
-  # rfc5321, 4.3.1, par 1 (SHOULD)
-  if ($self->state eq 'before-banner') {
-    $self->disconnect('554', 'Earlytalkers not welcome here');
-    return;
-  }
-
-  # Accept \s+ with empty params, rfc5321, 4.1.1, par 1 (SHOULD)
-  my ($cmd, $rest) = $data =~ /^(\w{1,12})(?:\s+(.*))?$/;
-  if (!$cmd) {
-    $self->send('550', 'Command not recognized');
-    return;
-  }
-
-  my $ncmd = uc($cmd);
-  if ($ncmd eq 'QUIT') {
-    $self->disconnect('221', 'Bye');
-  }
-  elsif ($ncmd eq 'EHLO' || $ncmd eq 'HELO') {
-    $self->_ehlo_cmd($ncmd, $rest);
-  }
-  elsif ($ncmd eq 'MAIL') {
-    $self->_mail_from_cmd($ncmd, $rest);
-  }
-  else {
-    $self->_err_500_command_unknown;
-  }
-
-  return;
-}
-
-sub _parse_arguments {
-  my ($self, $rest) = @_;
-  $rest =~ s/\s+$//;
-
-  return split(/\s+/, $rest);
-}
-
-sub _parse_mail_address {
-  my ($self, $args) = @_;
-  
-  my $addr = shift @$args;
-  return unless $addr;
-  
-  # TODO: validate and canonify address
-  $addr =~ s/^<(.*)>$/$1/;
-
-  return $addr;
-}
-
-sub _parse_extensions {
-  my ($self, $args) = @_;
-  
-  my %exts;
-  foreach my $ext (@$args) {
-    my ($key, $value) = $ext =~ /^([^=]+)(?:=(.+))?$/;
-    return unless $key;
-    $exts{$key} = $value;
-  }
-  
-  return \%exts;
-}
-
-
 ### SMTP Commmands
 sub _ehlo_cmd {
   my ($self, $type, $rest) = @_;
-  my ($host) = $self->_parse_arguments($rest);
+  my ($host) = $self->server->parser->arguments($rest);
 
   $self->reset_transaction;
 
@@ -226,9 +158,9 @@ sub _mail_from_cmd {
 
   return $self->_err_501_syntax_error('missing from') unless $rest =~ s/^from:\s*//i;
   
-  my @args = $self->_parse_arguments($rest);
-  my $rev_path = $self->_parse_mail_address(\@args);
-  my $exts = $self->_parse_extensions(\@args);
+  my @args = $self->server->parser->arguments($rest);
+  my $rev_path = $self->server->parser->mail_address(\@args);
+  my $exts = $self->server->parser->extensions(\@args);
   
   return $self->_err_501_syntax_error('invalid reverse path')
     unless defined $rev_path;
@@ -311,7 +243,7 @@ sub _on_read {
   my ($self, $data) = @_;
   $self->is_reading(0);
 
-  $self->_parse_command($data);
+  $self->server->parser->command($data);
 
   # And keep on reading
   $self->_start_read;

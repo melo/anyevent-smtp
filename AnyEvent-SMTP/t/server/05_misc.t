@@ -12,14 +12,15 @@ my $sess = AnyEvent::SMTP::Server::Session->new({
   host   => '127.0.0.1',
   port   => '1212',
 });
+my $parser = $srv->parser;
 
 cmp_deeply(
-  [ $sess->_parse_arguments('aa  bb    dd')],
+  [ $parser->arguments('aa  bb    dd')],
   [ 'aa', 'bb', 'dd' ],
 );
 
 cmp_deeply(
-  [ $sess->_parse_arguments('aa  bb=212   dd')],
+  [ $parser->arguments('aa  bb=212   dd')],
   [ 'aa', 'bb=212', 'dd' ],
 );
 
@@ -32,7 +33,7 @@ my @mail_addr_test_cases = (
 );
 
 foreach my $tc (@mail_addr_test_cases) {
-  is($sess->_parse_mail_address([$tc->{in}]), $tc->{out});
+  is($parser->mail_address([$tc->{in}]), $tc->{out});
 }
 
 # test SMTP extensions parser for MAIL FROM and RCPT TO
@@ -64,13 +65,13 @@ my @extenions_test_cases = (
 );
 
 foreach my $tc (@extenions_test_cases) {
-  my @args = $sess->_parse_arguments($tc->{in});
+  my @args = $parser->arguments($tc->{in});
   cmp_deeply(
     \@args,
     $tc->{args},
   );
   cmp_deeply(
-    $sess->_parse_extensions(\@args),
+    $parser->extensions(\@args),
     $tc->{out},
     "extension parser for '$tc->{in}'",
   );
@@ -104,5 +105,4 @@ is($test_hook_sess, 2);
 
 ### Parser support
 can_ok($srv, qw( parser_class parser ));
-my $parser = $srv->parser;
 can_ok($parser, qw( server ));

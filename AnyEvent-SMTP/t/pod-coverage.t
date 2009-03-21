@@ -7,6 +7,8 @@ my $min_tpc = 1.08;
 eval "use Test::Pod::Coverage $min_tpc";
 plan skip_all => "Test::Pod::Coverage $min_tpc required for testing POD coverage"
     if $@;
+plan skip_all => "Enable Pod tests with ENV TEST_AUTHOR_POD=1"
+    unless $ENV{TEST_AUTHOR_POD};
 
 # Test::Pod::Coverage doesn't require a minimum Pod::Coverage version,
 # but older versions don't recognize some common documentation styles

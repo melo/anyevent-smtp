@@ -4,6 +4,7 @@ use Mouse;
 use AnyEvent;
 use AnyEvent::Socket;
 use AnyEvent::SMTP::Server::Session;
+use AnyEvent::SMTP::Server::Parser;
 use Async::Hooks;
 
 has 'port' => (
@@ -55,6 +56,27 @@ has hooks => (
   default => sub { Async::Hooks->new },
   handles => [qw( call hook )],
 );
+
+# Command parser
+has parser_class => (
+  isa => 'Str',
+  is  => 'rw',
+  default =>  'AnyEvent::SMTP::Server::Parser',
+);
+
+has parser => (
+  isa => 'Object',
+  is  => 'rw',
+  lazy    => 1,
+  default => sub {
+    my $srv = shift;
+
+    return $srv->parser_class->new({
+      server => $srv,
+    });
+  },
+);
+
 
 
 sub start {

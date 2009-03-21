@@ -25,6 +25,7 @@ run(sub {
   $srv->start;
   ok(defined($srv->server_guard));
   ok(defined($srv->current_port));
+  ok(defined($srv->parser));
   is(scalar(%{$srv->sessions}), 0);
 
   my $cp = $srv->current_port;

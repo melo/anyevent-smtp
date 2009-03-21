@@ -34,52 +34,57 @@ run(sub {
     my ($fh, $host, $port) = @_;
     ok($_[0], 'Connected succesfully');
 
-    my $sess = $srv->sessions;
-    is(scalar(keys %$sess), 1);
+    run(sub {
+      my $sess = $srv->sessions;
+      is(scalar(keys %$sess), 1);
 
-    my ($session) = values(%$sess);
-    ok($session);
-    is($session->server, $srv);
-    is($session->state, 'before-banner');
+      my ($session) = values(%$sess);
+      ok($session);
+      is($session->server, $srv);
+      is($session->state, 'before-banner');
 
-    is($host, '127.0.0.1');
-    is($port, $cp);
+      is($host, '127.0.0.1');
+      is($port, $cp);
 
-    my $handle; $handle = AnyEvent::Handle->new(
-      fh => $fh,
-      on_eof   => sub { undef $handle },
-      on_error => sub { undef $handle },
-    );
-    $handle->push_read( line => sub {
-      like($_[1], qr{^220 example.com ESMTP$});
-      is($session->state, 'wait-for-ehlo');
-
-      throws_ok(
-        sub { $session->_send_banner },
-        qr{_send_banner.+'before-banner'.+'wait-for-ehlo'},
-        'Too late for _send_banner() call',
+      my $handle; $handle = AnyEvent::Handle->new(
+        fh => $fh,
+        on_eof   => sub { undef $handle },
+        on_error => sub { undef $handle },
       );
+      # We no longer need this around and we need to release it
+      # without it, even if handle is released, $fh is still alive.
+      undef $fh;
+      $handle->push_read( line => sub {
+        like($_[1], qr{^220 example.com ESMTP$});
+        is($session->state, 'wait-for-ehlo');
 
-      # Close the connection
-      undef $handle;
+        throws_ok(
+          sub { $session->_send_banner },
+          qr{_send_banner.+'before-banner'.+'wait-for-ehlo'},
+          'Too late for _send_banner() call',
+        );
 
-      run(sub {
-        $srv->stop;
-        ok(!defined($srv->server_guard));
-        ok(!defined($srv->current_port));
+        # Close the connection
+        undef $handle;
 
-        connect_to('127.0.0.1', $cp, sub {
-          ok(!$_[0], 'No longer listening');
-
-          run(sub {
-            my $sess = $srv->sessions;
-            is(scalar(keys %$sess), 0);
-
-            $test_run->send;
+        run(sub {
+          $srv->stop;
+          ok(!defined($srv->server_guard));
+          ok(!defined($srv->current_port));
+        
+          connect_to('127.0.0.1', $cp, sub {
+            ok(!$_[0], 'No longer listening');
+        
+            run(sub {
+              my $sess = $srv->sessions;
+              is(scalar(keys %$sess), 0);
+        
+              $test_run->send;
+            });
           });
         });
       });
-    });
+    })
   });
 });
 

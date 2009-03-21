@@ -233,21 +233,37 @@ sub _start_read {
   $self->is_reading(1);
 
   $self->handle->push_read( line => sub {
-    $self->_on_read($_[1]);
+    $self->is_reading(0);
+    $self->_line_in($_[1]);
+    return $self->_start_read;
   });
 
   return;
 }
 
-sub _on_read {
-  my ($self, $data) = @_;
-  $self->is_reading(0);
+sub _line_in {
+  my ($self, $line) = @_;
 
-  $self->server->parser->command($data);
+  $self->call('line_in', [$self, $line], sub {
+    my ($ctl, $args, $ignore_line) = @_;
+    return if $ignore_line;
+    
+    return $self->_parse_command($args->[1]);
+  });
 
-  # And keep on reading
-  $self->_start_read;
+  return $self->_start_read;
+}
 
+sub _parse_command {
+  my ($self, $line) = @_;
+  
+  $self->call('parse_command', [$self, $line], sub {
+    my ($ctl, $args, $command_parsed) = @_;
+    return if $command_parsed;
+    
+    return $self->err_500_command_unknown;
+  });
+  
   return;
 }
 

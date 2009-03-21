@@ -53,8 +53,12 @@ has state => (
 
 # the current active transaction
 has transaction => (
-  isa => 'AnyEvent::SMTP::Server::Transaction',
-  is  => 'rw',
+  isa     => 'AnyEvent::SMTP::Server::Transaction',
+  is      => 'rw',
+  lazy    => 1,
+  default => sub {
+    return AnyEvent::SMTP::Server::Transaction->new({ session => $_[0] })
+  },
   clearer => 'reset_transaction',
 );
 
@@ -103,7 +107,6 @@ sub send {
 
   $self->handle->push_write($response);
 }
-
 
 sub disconnect {
   my ($self, $code, @mesg) = @_;
@@ -183,17 +186,6 @@ sub _ehlo_cmd {
     if $type eq 'EHLO';
 
   return $self->send(@response);
-}
-
-
-### SMTP transaction
-sub _start_transaction {
-  my ($self) = @_;
-
-  my $t = AnyEvent::SMTP::Server::Transaction->new;
-  $self->transaction($t);
-
-  return $t;
 }
 
 

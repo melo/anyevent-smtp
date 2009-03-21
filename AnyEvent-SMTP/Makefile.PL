@@ -9,7 +9,7 @@ requires 'Mouse' => 0;
 requires 'AnyEvent' => 0;
 requires 'AnyEvent::Handle' => 0;
 requires 'AnyEvent::Socket' => 0;
-requires 'Async::Hooks'     => 0;
+requires 'Async::Hooks' => '0.04';
 
 build_requires 'Test::More';
 build_requires 'Test::Exception';

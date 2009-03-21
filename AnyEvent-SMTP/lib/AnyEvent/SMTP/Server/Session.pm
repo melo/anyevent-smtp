@@ -132,7 +132,7 @@ sub _ehlo_cmd {
 
   $self->reset_transaction;
 
-  return $self->_err_501_syntax_error("$type requires domain/address - see rfc5321, section 4.1.1.1")
+  return $self->err_501_syntax_error("$type requires domain/address - see rfc5321, section 4.1.1.1")
     unless $host;
 
   $self->ehlo_type($type);
@@ -156,15 +156,15 @@ sub _mail_from_cmd {
   # A MAIL command starts a new transaction, rfc5321, section 4.1.1.2, para 1 
   $self->reset_transaction;
 
-  return $self->_err_501_syntax_error('missing from') unless $rest =~ s/^from:\s*//i;
+  return $self->err_501_syntax_error('missing from') unless $rest =~ s/^from:\s*//i;
   
   my @args = $self->server->parser->arguments($rest);
   my $rev_path = $self->server->parser->mail_address(\@args);
   my $exts = $self->server->parser->extensions(\@args);
   
-  return $self->_err_501_syntax_error('invalid reverse path')
+  return $self->err_501_syntax_error('invalid reverse path')
     unless defined $rev_path;
-  return $self->_err_501_syntax_error('error parsing extensions')
+  return $self->err_501_syntax_error('error parsing extensions')
     unless defined $exts;
   
   $self->transaction->reverse_path($rev_path);
@@ -176,19 +176,19 @@ sub _mail_from_cmd {
   }
   
   return if $done;
-  return $self->_ok_250;
+  return $self->ok_250;
 }
 
 ### OK/Error standard responses
-sub _ok_250 {
-  return $_[0]->send('250', 'Ok');
+sub ok_250 {
+  return $_[0]->send('250', $_[1] || 'ok');
 }
 
-sub _err_500_command_unknown {
-  return $_[0]->send('500', 'Command unrecognized');
+sub err_500_command_unknown {
+  return $_[0]->send('500', 'Command unknown');
 }
 
-sub _err_501_syntax_error {
+sub err_501_syntax_error {
   return $_[0]->send('501', $_[1] || 'Syntax error');
 }
 

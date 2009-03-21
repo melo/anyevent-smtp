@@ -24,37 +24,37 @@ my @mail_from_test_cases = (
   {
     in       => 'from:<>',
     rev_path => '',
-    buffer   => "250 Ok\r\n",
+    buffer   => "250 ok\r\n",
     ext      => {},
   },
   {
     in => 'from:<x@y>',
     rev_path => 'x@y',
-    buffer => "250 Ok\r\n",
+    buffer => "250 ok\r\n",
     ext => {},
   },
   {
     in => 'from:x@y',
     rev_path => 'x@y',
-    buffer => "250 Ok\r\n",
+    buffer => "250 ok\r\n",
     ext => {},
   },
   {
     in => 'from: <x@y>',
     rev_path => 'x@y',
-    buffer => "250 Ok\r\n",
+    buffer => "250 ok\r\n",
     ext => {},
   },
   {
     in => 'from: x@y',
     rev_path => 'x@y',
-    buffer => "250 Ok\r\n",
+    buffer => "250 ok\r\n",
     ext => {},
   },
   {
     in => 'from:<x@y> BODY=8BITMIME',
     rev_path => 'x@y',
-    buffer => "250 Ok\r\n",
+    buffer => "250 ok\r\n",
     ext => {
       'BODY' => '8BITMIME',
     },
@@ -62,7 +62,7 @@ my @mail_from_test_cases = (
   {
     in => 'from:<x@y> BODY=8BITMIME RANDOMEXT SIZE=10000',
     rev_path => 'x@y',
-    buffer => "250 Ok\r\n",
+    buffer => "250 ok\r\n",
     ext => {
       'BODY' => '8BITMIME',
       'RANDOMEXT' => undef,

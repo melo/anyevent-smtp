@@ -127,6 +127,7 @@ cmp_deeply(
 
 ### Parser support
 can_ok($srv, qw( parser_class parser ));
+can_ok($sess, qw( parser hook call ));
 can_ok($parser, qw( server hook call ));
 
 

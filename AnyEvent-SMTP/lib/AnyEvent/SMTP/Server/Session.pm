@@ -9,7 +9,7 @@ has server => (
   isa => 'AnyEvent::SMTP::Server',
   is  => 'ro',
   required => 1,
-  handles => [qw( call hook )],
+  handles => [qw( call hook parser )],
 );
 
 # host/port of the peer
@@ -128,7 +128,7 @@ sub disconnect {
 ### SMTP Commmands
 sub _ehlo_cmd {
   my ($self, $type, $rest) = @_;
-  my ($host) = $self->server->parser->arguments($rest);
+  my ($host) = $self->parser->arguments($rest);
 
   $self->reset_transaction;
 
@@ -158,9 +158,9 @@ sub _mail_from_cmd {
 
   return $self->err_501_syntax_error('missing from') unless $rest =~ s/^from:\s*//i;
   
-  my @args = $self->server->parser->arguments($rest);
-  my $rev_path = $self->server->parser->mail_address(\@args);
-  my $exts = $self->server->parser->extensions(\@args);
+  my @args = $self->parser->arguments($rest);
+  my $rev_path = $self->parser->mail_address(\@args);
+  my $exts = $self->parser->extensions(\@args);
   
   return $self->err_501_syntax_error('invalid reverse path')
     unless defined $rev_path;

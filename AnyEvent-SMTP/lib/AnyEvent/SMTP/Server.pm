@@ -82,13 +82,13 @@ has parser => (
 sub start {
   my ($self) = @_;
 
+  # Start our listening socket
   my $guard = tcp_server(
     undef,
     $self->port,
-    sub { return $self->_on_new_connection(@_) },
+    sub { return $self->session_start(@_) },
     sub { $self->current_port($_[2]); return 0 },
   );
-
   $self->server_guard($guard);
 
   return;
@@ -104,10 +104,11 @@ sub stop {
 }
 
 
-##################
-# Internal methods
+#################
+# Session Manager
 
-sub _on_new_connection {
+### new connection handler
+sub session_start {
   my ($self, $fh, $host, $port) = @_;
 
   my $session = $self->session_class->new({
@@ -122,7 +123,8 @@ sub _on_new_connection {
   return;
 }
 
-sub _on_session_ended {
+## when a session is not longer with us
+sub session_stop {
   my ($self, $session) = @_;
 
   return delete $self->sessions->{$session};

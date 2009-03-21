@@ -218,7 +218,7 @@ sub _on_disconnect {
   my ($self) = @_;
 
   $self->clear_handle;
-  $self->server->_on_session_ended($self);
+  $self->server->session_stop($self);
 
   return;
 }

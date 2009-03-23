@@ -6,7 +6,9 @@ use Test::More 'no_plan';
 use Test::Deep;
 
 use AnyEvent::SMTP::Server::Request;
+use AnyEvent::SMTP::Server::Path;
 
+### Test ::Request
 my $req = AnyEvent::SMTP::Server::Request->new({
   line => 'MAIL FROM:<melo@domain.com> BODY=8BITMIME COOL LOVELLY=YES BITE=ME',
   command => 'mail',
@@ -70,4 +72,27 @@ is(scalar($req->unacked_extensions), 0);
 cmp_deeply(
   [ $req->unacked_extensions ],
   [ ],
+);
+
+
+### a Path (reverse or forward)
+my $path = AnyEvent::SMTP::Server::Path->new({
+  addr => 'melo@domain.com',
+  extensions => {
+    'BODY'    => '8BITMIME',
+    'COOL'    => undef,
+    'LOVELLY' => 'YES',
+    'BITE'    => 'ME',
+  },
+});
+ok($path);
+is($path->addr, 'melo@domain.com');
+cmp_deeply(
+  $path->extensions,
+  {
+    'BODY'    => '8BITMIME',
+    'COOL'    => undef,
+    'LOVELLY' => 'YES',
+    'BITE'    => 'ME',
+  },
 );

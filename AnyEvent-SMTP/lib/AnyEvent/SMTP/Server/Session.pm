@@ -254,7 +254,6 @@ sub _parse_command {
     
     # A problem was detected and already taken care off
     return if $is_done;
-    print STDERR "## '$cmd_parse_event' detected no problems\n";
 
     # $args->[2] is $rest after crossing all handlers
     # if not empty, something was not parsed

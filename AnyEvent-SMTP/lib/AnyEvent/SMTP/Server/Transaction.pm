@@ -9,7 +9,7 @@ has session => (
 );
 
 has reverse_path => (
-  isa => 'Str',
+  isa => 'AnyEvent::SMTP::Server::Path',
   is  => 'rw',
 );
 

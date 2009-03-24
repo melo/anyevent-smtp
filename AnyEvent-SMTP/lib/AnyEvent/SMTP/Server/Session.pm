@@ -3,13 +3,41 @@ package AnyEvent::SMTP::Server::Session;
 use Mouse;
 use AnyEvent::Handle;
 use AnyEvent::SMTP::Server::Transaction;
+use AnyEvent::SMTP::Server::Request;
+use AnyEvent::SMTP::Server::Path;
+use AnyEvent::SMTP::Utils qw( split_smtp_cmd );
 
 # our server
 has server => (
   isa => 'AnyEvent::SMTP::Server',
   is  => 'ro',
   required => 1,
-  handles => [qw( call hook parser )],
+  handles => [qw( call hook has_hooks_for )],
+);
+
+# our helper classes
+has request_class => (
+  isa => 'Str',
+  is  => 'rw',
+  default => 'AnyEvent::SMTP::Server::Request',
+);
+
+has response_class => (
+  isa => 'Str',
+  is  => 'rw',
+  default => 'AnyEvent::SMTP::Server::Response',
+);
+
+has path_class => (
+  isa => 'Str',
+  is  => 'rw',
+  default => 'AnyEvent::SMTP::Server::Path',
+);
+
+has transaction_class => (
+  isa => 'Str',
+  is  => 'rw',
+  default => 'AnyEvent::SMTP::Server::Transaction',
 );
 
 # host/port of the peer
@@ -54,13 +82,9 @@ has state => (
 
 # the current active transaction
 has transaction => (
-  isa     => 'AnyEvent::SMTP::Server::Transaction',
-  is      => 'rw',
-  lazy    => 1,
-  default => sub {
-    return AnyEvent::SMTP::Server::Transaction->new({ session => $_[0] })
-  },
-  clearer => 'reset_transaction',
+  isa        => 'AnyEvent::SMTP::Server::Transaction',
+  is         => 'rw',
+  lazy_build => 1,
 );
 
 # helo type and identification
@@ -122,62 +146,14 @@ sub disconnect {
 }
 
 
-##################
-# Internal methods
+### Current transaction initialization
 
-### SMTP Commmands
-sub _ehlo_cmd {
-  my ($self, $type, $rest) = @_;
-  my ($host) = $self->parser->arguments($rest);
-
-  $self->reset_transaction;
-
-  return $self->err_501_syntax_error("$type requires domain/address - see rfc5321, section 4.1.1.1")
-    unless $host;
-
-  $self->ehlo_type($type);
-  $self->ehlo_host($host);
-
-  my @response = (
-    '250',
-    [$self->server->domain, 'Welcome,', $self->host ],
-  );
-
-  push @response, qw( PIPELINE 8BITMIME )
-    if $type eq 'EHLO';
-
-  return $self->send(@response);
+sub _build_transaction {
+  my ($self) = @_;
+  
+  return $self->transaction_class->new({ session => $self });
 }
 
-sub _mail_from_cmd {
-  my ($self, $ncmd, $rest) = @_;
-  my $srv = $self->server;
-
-  # A MAIL command starts a new transaction, rfc5321, section 4.1.1.2, para 1 
-  $self->reset_transaction;
-
-  return $self->err_501_syntax_error('missing from') unless $rest =~ s/^from:\s*//i;
-  
-  my @args = $self->parser->arguments($rest);
-  my $rev_path = $self->parser->mail_address(\@args);
-  my $exts = $self->parser->extensions(\@args);
-  
-  return $self->err_501_syntax_error('invalid reverse path')
-    unless defined $rev_path;
-  return $self->err_501_syntax_error('error parsing extensions')
-    unless defined $exts;
-  
-  $self->transaction->reverse_path($rev_path);
-  # TODO: mix $ext with $rev_path as soon as we get a proper ::Address object
-  
-  my $done;
-  if (my $cb = $srv->on_mail_from) {
-    $done = $cb->($self, $rev_path, $exts);
-  }
-  
-  return if $done;
-  return $self->ok_250;
-}
 
 ### OK/Error standard responses
 sub ok_250 {
@@ -192,6 +168,9 @@ sub err_501_syntax_error {
   return $_[0]->send('501', $_[1] || 'Syntax error');
 }
 
+
+##################
+# Internal methods
 
 ### Banner methods
 sub _send_banner {
@@ -244,26 +223,65 @@ sub _start_read {
 sub _line_in {
   my ($self, $line) = @_;
 
-  $self->call('line_in', [$self, $line], sub {
+  my $req = $self->request_class->new({ line => $line });
+
+  $self->call('line_in', [$self, $req, $line], sub {
     my ($ctl, $args, $ignore_line) = @_;
     return if $ignore_line;
-    
-    return $self->_parse_command($args->[1]);
+
+    return $self->_parse_command($args->[1], $args->[2]);
   });
 
-  return $self->_start_read;
+  return;
 }
 
 sub _parse_command {
-  my ($self, $line) = @_;
+  my ($self, $req, $line) = @_;
+
+  my ($cmd, $rest) = split_smtp_cmd($line);
+  return $self->err_500_command_unknown unless $cmd;
+
+  # If no hooks are defined for parsing this cmd, then its not a
+  # valid command
+  my $cmd_parse_event = "parse_${cmd}_command";
+  return $self->err_500_command_unknown("Unkown '$cmd'")
+    unless $self->has_hooks_for($cmd_parse_event);
   
-  $self->call('parse_command', [$self, $line], sub {
-    my ($ctl, $args, $command_parsed) = @_;
-    return if $command_parsed;
+  $req->command($cmd);
+  
+  $self->call($cmd_parse_event, [$self, $req, $rest], sub {
+    my ($ctl, $args, $is_done) = @_;
     
-    return $self->err_500_command_unknown;
+    # A problem was detected and already taken care off
+    return if $is_done;
+    print STDERR "## '$cmd_parse_event' detected no problems\n";
+
+    # $args->[2] is $rest after crossing all handlers
+    # if not empty, something was not parsed
+    return $self->err_501_syntax_error("Unrecognized arguments '$rest'")
+      if $args->[2];
+    
+    # Final global checks to command
+    $self->call("validate_${cmd}_command", [$self, $req], sub {
+      my ($ctl, $args, $is_error) = @_;
+      return if $is_error;
+      
+      # Unparsed extensions must also be rejected
+      if (my ($ext) = $req->unacked_extensions) {
+        return $self->err_501_syntax_error("Unrecognized extension '$ext'");
+      }
+
+      # Execute it
+      $self->call("execute_${cmd}_command", [$self, $req], sub {
+        my ($ctl, $args, $is_done) = @_;
+        return if $is_done;
+        
+        # Proably a better code here
+        $self->err_501_syntax_error('Unhandled command');
+      })
+    });
   });
-  
+
   return;
 }
 

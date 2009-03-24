@@ -6,6 +6,7 @@ use lib './t/tlib';
 use Test::More 'no_plan';
 use Test::Deep;
 use AnyEvent::SMTP::Server;
+use AnyEvent::SMTP::Server::Commands;
 use FakeHandle;
 
 my $srv = AnyEvent::SMTP::Server->new({
@@ -16,70 +17,7 @@ my $sess = AnyEvent::SMTP::Server::Session->new({
   host   => '127.0.0.1',
   port   => '1212',
 });
-my $parser = $srv->parser;
-
-cmp_deeply(
-  [ $parser->arguments('aa  bb    dd')],
-  [ 'aa', 'bb', 'dd' ],
-);
-
-cmp_deeply(
-  [ $parser->arguments('aa  bb=212   dd')],
-  [ 'aa', 'bb=212', 'dd' ],
-);
-
-
-# test address parser for MAIL FROM and RCPT TO
-my @mail_addr_test_cases = (
-  { in => '<>',    out => ''    },
-  { in => 'x@y',   out => 'x@y' },
-  { in => '<x@y>', out => 'x@y' },
-);
-
-foreach my $tc (@mail_addr_test_cases) {
-  is($parser->mail_address([$tc->{in}]), $tc->{out});
-}
-
-# test SMTP extensions parser for MAIL FROM and RCPT TO
-my @extenions_test_cases = (
-  {
-    in => 'BODY=8BITMIME',
-    args => [ 'BODY=8BITMIME' ],
-    out => {
-      'BODY' => '8BITMIME',
-    },
-  },
-  {
-    in => 'BODY=8BITMIME XPTO',
-    args => [ 'BODY=8BITMIME', 'XPTO' ],
-    out => {
-      'BODY' => '8BITMIME',
-      'XPTO' => undef,
-    },
-  },
-  {
-    in => 'XPTO  BODY=8BITMIME  YPTO=SOME',
-    args => [ 'XPTO', 'BODY=8BITMIME', 'YPTO=SOME' ],
-    out => {
-      'BODY' => '8BITMIME',
-      'XPTO' => undef,
-      'YPTO' => 'SOME',
-    },
-  },
-);
-
-foreach my $tc (@extenions_test_cases) {
-  my @args = $parser->arguments($tc->{in});
-  cmp_deeply(
-    \@args,
-    $tc->{args},
-  );
-  cmp_deeply(
-    $parser->extensions(\@args),
-    $tc->{out},
-    "extension parser for '$tc->{in}'",
-  );
-}
+my $cmds = $srv->command_handler;
 
 ### Support for the new Async::Hooks support
 isa_ok($srv->hooks, 'Async::Hooks');
@@ -96,9 +34,9 @@ $sess->hook('test', sub {
   $called{session}++;
   $ctl->next;
 });
-$parser->hook('test', sub {
+$cmds->hook('test', sub {
   my ($ctl) = @_;
-  $called{parser}++;
+  $called{cmds}++;
   $ctl->next;
 });
 
@@ -106,7 +44,7 @@ $parser->hook('test', sub {
 $srv->call('test');
 cmp_deeply(
   \%called,
-  { server => 1, session => 1, parser => 1},
+  { server => 1, session => 1, cmds => 1},
   'callig hook on server, ok',
 );
 
@@ -114,23 +52,22 @@ cmp_deeply(
 $sess->call('test');
 cmp_deeply(
   \%called,
-  { server => 1, session => 1, parser => 1},
+  { server => 1, session => 1, cmds => 1},
   'callig hook on session, ok',
 );
 
 %called = ();
-$parser->call('test');
+$cmds->call('test');
 cmp_deeply(
   \%called,
-  { server => 1, session => 1, parser => 1},
-  'callig hook on parser, ok',
+  { server => 1, session => 1, cmds => 1},
+  'callig hook on cmds, ok',
 );
 
 
-### Parser support
-can_ok($srv, qw( parser_class parser ));
-can_ok($sess, qw( parser hook call ));
-can_ok($parser, qw( server hook call ));
+### Shortcut support
+can_ok($sess, qw( server hook call has_hooks_for ));
+can_ok($cmds, qw( server hook call has_hooks_for ));
 
 
 ### send() tests

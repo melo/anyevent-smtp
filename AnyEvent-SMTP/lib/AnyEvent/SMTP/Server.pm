@@ -4,7 +4,6 @@ use Mouse;
 use AnyEvent;
 use AnyEvent::Socket;
 use AnyEvent::SMTP::Server::Session;
-use AnyEvent::SMTP::Server::Parser;
 use Async::Hooks;
 
 has 'port' => (
@@ -53,33 +52,39 @@ has hooks => (
   isa => 'Async::Hooks',
   is  => 'ro',
   default => sub { Async::Hooks->new },
-  handles => [qw( call hook )],
+  handles => [qw( call hook has_hooks_for )],
 );
 
-# Command parser
-has parser_class => (
+# Default command handler
+has command_handler_class => (
   isa => 'Str',
   is  => 'rw',
-  default =>  'AnyEvent::SMTP::Server::Parser',
+  default => 'AnyEvent::SMTP::Server::Commands',
 );
 
-has parser => (
+has command_handler => (
   isa => 'Object',
   is  => 'rw',
-  lazy    => 1,
+  lazy => 1,
   default => sub {
-    my $srv = shift;
-
-    return $srv->parser_class->new({
-      server => $srv,
-    });
+    my $self = shift;
+    
+    return $self->command_handler_class->new({ server => $self });
   },
+  clearer => 'clear_command_handler',
 );
 
 
 
 sub start {
   my ($self) = @_;
+
+  # Starts default command handler if any
+  if (my $cmd_class = $self->command_handler_class) {
+    # Will die if class cannot be loaded
+    Mouse::load_class($cmd_class);
+    $self->command_handler->start;
+  }
 
   # Start our listening socket
   my $guard = tcp_server(
@@ -98,6 +103,7 @@ sub stop {
 
   $self->clear_server_guard;
   $self->clear_current_port;
+  $self->clear_command_handler;
 
   return;
 }

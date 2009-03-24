@@ -22,7 +22,6 @@ has 'domain' => (
   isa      => 'Str',
   is       => 'rw',
   required => 1,
-  default  => 'example.com',
 );
 
 has 'server_guard' => (

@@ -11,7 +11,9 @@ use FakeHandle;
 # count hooks called
 my %called;
 
-my $srv = AnyEvent::SMTP::Server->new;
+my $srv = AnyEvent::SMTP::Server->new({
+  domain => 'example.com',
+});
 my $sess = AnyEvent::SMTP::Server::Session->new({
   server => $srv,
   host   => '127.0.0.1',

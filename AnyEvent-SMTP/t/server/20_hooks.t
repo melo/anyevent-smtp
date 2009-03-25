@@ -289,20 +289,8 @@ foreach my $tc (@htcs) {
     );
   }
 
-  if (exists $tc->{buffer}) {
-    is(
-      $handle->write_buffer,
-      $tc->{buffer},
-      "correct output [$tc->{test}]",
-    );
-  }
-  else {
-    is(
-      $handle->write_buffer,
-      "250 ok\r\n",
-      "correct output 250 ok [$tc->{test}]",
-    );
-  }
+  if (exists $tc->{buffer}) { is($handle->write_buffer, $tc->{buffer}) }
+  else                      { is($handle->write_buffer, "250 ok\r\n")  }
 
-  $tc->{tests}->($tc->{test}) if exists $tc->{tests};
+  $tc->{tests}->() if exists $tc->{tests};
 }

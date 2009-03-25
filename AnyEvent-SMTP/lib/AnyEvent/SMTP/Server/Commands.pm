@@ -47,8 +47,16 @@ sub _parse_ehlo_command {
   
   my ($host, @other) = split_smtp_cmd_args($rest);
   if (@other) {
-    $sess->err_501_syntax_error("arguments after host '$host' not permitted");
-    return $ctl->done;
+    # we ignore @other arguments as suggested in
+    # rfc 5321, sec 4.1.1.1 para 2:
+    # 
+    #   RFC 2821, and some earlier informal practices, encouraged
+    #   following the literal by information that would help to identify
+    #   the client system. That convention was not widely supported, and
+    #   many SMTP servers considered it an error. In the interest of
+    #   interoperability, it is probably wise for servers to be prepared
+    #   for this string to occur, but SMTP clients SHOULD NOT send it.
+    #
   }
 
   if (!$host) {

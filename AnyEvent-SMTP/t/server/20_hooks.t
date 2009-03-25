@@ -86,6 +86,7 @@ $srv->hook('validate_mail_command', sub {
 my @htcs = (
   ### IGNORE - test line_in stuff
   {
+    test => 'tc-1',
     item => 'ignore me',
     desc => 'ignore input lines works',
     hooks_called => {
@@ -96,6 +97,7 @@ my @htcs = (
   
   ### KILL - test command unknown
   {
+    test => 'tc-2',
     item => 'kill me',
     desc => 'test with unkown command, declined ok',
     hooks_called => {
@@ -106,6 +108,7 @@ my @htcs = (
 
   ### XPTO - our test command
   {
+    test => 'tc-3',
     item => 'xpto done yuppii',
     desc => 'parse_xpto_command with proprietary parsing, ok',
     hooks_called => {
@@ -116,6 +119,7 @@ my @htcs = (
   },
 
   {
+    test => 'tc-4',
     item => 'xpto unparsed stuff',
     desc => 'parse_xpto_command didnt parse it, unkown',
     hooks_called => {
@@ -127,16 +131,19 @@ my @htcs = (
   
   ### HELO
   {
+    test => 'tc-5',
     item => 'helo',
     buffer => "501 helo requires domain/address - see rfc5321, section 4.1.1.1\r\n",
   },
   
   {
+    test => 'tc-6',
     item => 'helo domain.me wtf',
     buffer => "501 arguments after host 'domain.me' not permitted\r\n",
   },
   
   {
+    test => 'tc-7',
     item => 'helo domain.me',
     buffer => "250 example.com Welcome, domain.me\r\n",
     tests => sub {
@@ -147,16 +154,19 @@ my @htcs = (
    
   ### EHLO
   {
+    test => 'tc-8',
     item => 'ehlo',
     buffer => "501 ehlo requires domain/address - see rfc5321, section 4.1.1.1\r\n",
   },
   
   {
+    test => 'tc-9',
     item => 'ehlo domain.me wtf',
     buffer => "501 arguments after host 'domain.me' not permitted\r\n",
   },
   
   {
+    test => 'tc-10',
     item => 'ehlo domain.me',
     buffer => "250-example.com Welcome, domain.me\r\n250 8BITMIME\r\n",
     tests => sub {
@@ -167,26 +177,31 @@ my @htcs = (
   
   ### MAIL
   {
+    test => 'tc-11',
     item => 'mail',
     buffer => "501 Missing 'from:' argument\r\n",
   },
   
   {
+    test => 'tc-12',
     item => 'mail from:',
     buffer => "501 Missing reverse-path after FROM:\r\n",
   },
   
   {
+    test => 'tc-13',
     item => 'mail from:<xpto@me> =',
     buffer => "501 Unable to parse '='\r\n",
   },
   
   {
+    test => 'tc-14',
     item => 'mail from:<xpto@me> BODY=8BITMIME WTF',
     buffer => "501 Unrecognized extension 'WTF'\r\n",
   },
   
   {
+    test => 'tc-15',
     item => 'mail from:<xpto@me> BODY=8BITMIME',
     tests => sub {
       my $r = $sess->transaction->reverse_path;
@@ -198,6 +213,7 @@ my @htcs = (
   },
   
   {
+    test => 'tc-16',
     item => 'mail from:<>',
     tests => sub {
       my $r = $sess->transaction->reverse_path;
@@ -207,6 +223,7 @@ my @htcs = (
   },
   
   {
+    test => 'tc-17',
     item => 'mail from:<x@y>',
     tests => sub {
       my $r = $sess->transaction->reverse_path;
@@ -216,6 +233,7 @@ my @htcs = (
   },
   
   {
+    test => 'tc-18',
     item => 'mail from: <x@y>',
     tests => sub {
       my $r = $sess->transaction->reverse_path;
@@ -225,6 +243,7 @@ my @htcs = (
   },
   
   {
+    test => 'tc-19',
     item => 'mail from:x@y',
     tests => sub {
       my $r = $sess->transaction->reverse_path;
@@ -234,6 +253,7 @@ my @htcs = (
   },
   
   {
+    test => 'tc-20',
     item => 'mail from: x@y',
     tests => sub {
       my $r = $sess->transaction->reverse_path;
@@ -243,6 +263,7 @@ my @htcs = (
   },
   
   {
+    test => 'tc-21',
     item => 'mail from:<xpto@me> BODY=8BITMIME RANDOMEXT SIZE=10000',
     tests => sub {
       my $r = $sess->transaction->reverse_path;
@@ -264,12 +285,24 @@ foreach my $tc (@htcs) {
     cmp_deeply(
       \%called,
       $tc->{hooks_called},
-      $tc->{desc},
+      "$tc->{desc} [$tc->{test}]",
     );
   }
 
-  if (exists $tc->{buffer}) { is($handle->write_buffer, $tc->{buffer}) }
-  else                      { is($handle->write_buffer, "250 ok\r\n")  }
+  if (exists $tc->{buffer}) {
+    is(
+      $handle->write_buffer,
+      $tc->{buffer},
+      "correct output [$tc->{test}]",
+    );
+  }
+  else {
+    is(
+      $handle->write_buffer,
+      "250 ok\r\n",
+      "correct output 250 ok [$tc->{test}]",
+    );
+  }
 
-  $tc->{tests}->() if exists $tc->{tests};
+  $tc->{tests}->($tc->{test}) if exists $tc->{tests};
 }

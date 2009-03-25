@@ -211,6 +211,30 @@ sub _start_read {
   return if $self->is_reading;
   $self->is_reading(1);
 
+  # The current "line" definition in the push_read() below uses
+  # qr/\r?\n/ as the default EOF indication. This means that it allows for
+  # bare-LF end of lines.
+  # 
+  # The qpsmtpd and the qmail-smtpd server also allows this.
+  # 
+  # But RFC 5321, sec 4.1.1.4 para 3says:
+  # 
+  #   The custom of accepting lines ending only in <LF>, as a concession to
+  #   non-conforming behavior on the part of some UNIX systems, has proven
+  #   to cause more interoperability problems than it solves, and SMTP
+  #   server systems MUST NOT do this, even in the name of improved
+  #   robustness.  In particular, the sequence "<LF>.<LF>" (bare line
+  #   feeds, without carriage returns) MUST NOT be treated as equivalent to
+  #   <CRLF>.<CRLF> as the end of mail data indication.
+  # 
+  # Its not clear to me if this restriction is only applied to lines inside
+  # the DATA command (section 4.1.1.4 specifies the DATA command), or if we
+  # should apply this rule to all the lines.
+  # 
+  # For now, I decided to accept bare-lf's, but as I read more about this,
+  # I migth change the code.
+  # 
+  
   $self->handle->push_read( line => sub {
     $self->is_reading(0);
     $self->_line_in($_[1]);

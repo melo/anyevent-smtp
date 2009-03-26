@@ -70,6 +70,9 @@ $srv->hook('parse_xpto_command', sub {
   return $ctl->next;
 });
 
+# make sure xpto command exists
+$srv->hook('execute_xpto_command', sub {});
+
 
 ### Support two MAIL FROM extensions, RANDOMEXT and SIZE
 $srv->hook('validate_mail_command', sub {

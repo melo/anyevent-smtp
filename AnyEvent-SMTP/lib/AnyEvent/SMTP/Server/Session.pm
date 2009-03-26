@@ -274,13 +274,13 @@ sub _parse_command {
 
   # If no hooks are defined for parsing this cmd, then its not a
   # valid command
-  my $cmd_parse_event = "parse_${cmd}_command";
+  my $exec_cmd_event = "execute_${cmd}_command";
   return $self->err_500_command_unknown("Unkown '$cmd'")
-    unless $self->has_hooks_for($cmd_parse_event);
+    unless $self->has_hooks_for($exec_cmd_event);
   
   $req->command($cmd);
   
-  $self->call($cmd_parse_event, [$self, $req, $rest], sub {
+  $self->call("parse_${cmd}_command", [$self, $req, $rest], sub {
     my ($ctl, $args, $is_done) = @_;
     
     # A problem was detected and already taken care off
@@ -302,7 +302,7 @@ sub _parse_command {
       }
 
       # Execute it
-      $self->call("execute_${cmd}_command", [$self, $req], sub {
+      $self->call($exec_cmd_event, [$self, $req], sub {
         my ($ctl, $args, $is_done) = @_;
         return if $is_done;
         

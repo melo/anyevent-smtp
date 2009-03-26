@@ -51,7 +51,7 @@ sub push_item {
   my $rbuf = $self->read_buffer;
   my $pbuf = $self->pending_reads;
 
-  push @$rbuf, $item;
+  push @$rbuf, (ref($item) eq 'ARRAY'? @$item : $item);
   
   return unless @$pbuf;
   

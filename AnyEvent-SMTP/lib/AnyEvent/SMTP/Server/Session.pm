@@ -180,6 +180,11 @@ sub err_553_action_not_taken_mbox_not_allowed {
   return $_[0]->send('553', $_[1] || 'Action not taken: mailbox name not allowed');
 }
 
+sub err_555_bad_mail_rcpt_args {
+  return $_[0]->send('555', $_[1] || 'MAIL FROM/RCPT TO parameters not recognized or not implemented');
+}
+
+
 ##################
 # Internal methods
 

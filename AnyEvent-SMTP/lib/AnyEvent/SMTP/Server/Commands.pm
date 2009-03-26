@@ -219,9 +219,10 @@ sub _parse_address_and_extensions {
   push @{$req->args}, $addr;
   
   # Parse extenions and store them in our request
+  # rfc5321, sec 4.1.1.11 requires a 555 error in this case
   my $exts = parse_smtp_cmd_extensions(@exts);
   if (!$exts) {
-    $sess->err_501_syntax_error("Unable to parse '".join(' ', @exts)."'");
+    $sess->err_555_bad_mail_rcpt_args("Unable to parse '".join(' ', @exts)."'");
     return $ctl->done;
   }
   elsif (%$exts) {

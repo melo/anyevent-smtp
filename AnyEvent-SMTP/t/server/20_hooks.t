@@ -219,7 +219,7 @@ my @htcs = (
   {
     test => 'tc-13',
     item => 'mail from:<xpto@me> =',
-    buffer => "501 Unable to parse '='\r\n",
+    buffer => "555 Unable to parse '='\r\n",
   },
   
   {
@@ -320,7 +320,7 @@ my @htcs = (
   {
     test => 'tc-24',
     item => ['mail from:<>', 'rcpt to:<xpto@cool.domain> ='],
-    buffer => "250 ok\r\n501 Unable to parse '='\r\n",
+    buffer => "250 ok\r\n555 Unable to parse '='\r\n",
   },
   
   {

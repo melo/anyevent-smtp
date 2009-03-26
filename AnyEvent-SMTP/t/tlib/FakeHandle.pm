@@ -62,6 +62,8 @@ sub push_item {
   return;
 }
 
+sub on_drain {}
+
 
 no Mouse;
 __PACKAGE__->meta->make_immutable;

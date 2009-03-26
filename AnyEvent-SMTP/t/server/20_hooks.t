@@ -419,6 +419,7 @@ my @htcs = (
     },
   },
   
+  ### QUIT
   {
     test => 'tc-34',
     item => 'quit yeah',
@@ -429,6 +430,19 @@ my @htcs = (
     test => 'tc-35',
     item => 'quit',
     buffer => "221 Bye now\r\n",
+  },
+  
+  ### NOOP
+  {
+    test => 'tc-36',
+    item => 'noop yeah',
+    buffer => "250 ok\r\n",
+  },
+  
+  {
+    test => 'tc-37',
+    item => 'noop',
+    buffer => "250 ok\r\n",
   },
 );
 

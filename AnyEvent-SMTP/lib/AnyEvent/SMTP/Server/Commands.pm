@@ -33,6 +33,9 @@ sub start {
   $self->hook('parse_rcpt_command',    \&_parse_rcpt_command   );
   $self->hook('validate_rcpt_command', \&_validate_rcpt_command);
   $self->hook('execute_rcpt_command',  \&_exec_rcpt_command    );
+
+  $self->hook('parse_noop_command',   \&_parse_noop_command);
+  $self->hook('execute_noop_command', \&_exec_noop_command );
   
   $self->hook('execute_quit_command', \&_exec_quit_command);
   
@@ -229,6 +232,27 @@ sub _parse_address_and_extensions {
   }
   
   return $ctl->next;
+}
+
+
+### NOOP command
+sub _parse_noop_command {
+  my ($ctl, $args) = @_;
+ 
+  # Ignore arguments
+  # See rfc5321, sect 4.1.1.9
+  $args->[2] = '';
+
+  $ctl->next;  
+}
+
+sub _exec_noop_command {
+  my ($ctl, $args) = @_;
+  my ($sess) = @$args;
+
+  $sess->ok_250;
+  
+  return $ctl->done;
 }
 
 

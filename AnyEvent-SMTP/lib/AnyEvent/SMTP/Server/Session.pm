@@ -134,9 +134,9 @@ sub send {
 }
 
 sub disconnect {
-  my ($self, $code, @mesg) = @_;
+  my $self = shift;
 
-  $self->send($code, @mesg);
+  $self->send(@_) if @_;
 
   $self->handle->on_drain(sub {
     $self->clear_handle;

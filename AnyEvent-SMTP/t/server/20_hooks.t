@@ -418,6 +418,18 @@ my @htcs = (
       is(scalar(@$r), 0);
     },
   },
+  
+  {
+    test => 'tc-34',
+    item => 'quit yeah',
+    buffer => "501 Unrecognized arguments 'yeah'\r\n",
+  },
+  
+  {
+    test => 'tc-35',
+    item => 'quit',
+    buffer => "221 Bye now\r\n",
+  },
 );
 
 foreach my $tc (@htcs) {

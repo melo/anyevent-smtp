@@ -156,6 +156,10 @@ sub _build_transaction {
 
 
 ### OK/Error standard responses
+sub ok_221_bye_now {
+  return $_[0]->send('221', $_[1] || 'Bye now');
+}
+
 sub ok_250 {
   return $_[0]->send('250', $_[1] || 'ok');
 }

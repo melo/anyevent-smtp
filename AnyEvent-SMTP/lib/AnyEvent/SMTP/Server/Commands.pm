@@ -34,6 +34,8 @@ sub start {
   $self->hook('validate_rcpt_command', \&_validate_rcpt_command);
   $self->hook('execute_rcpt_command',  \&_exec_rcpt_command    );
   
+  $self->hook('execute_quit_command', \&_exec_quit_command);
+  
   return;
 }
 
@@ -229,5 +231,17 @@ sub _parse_address_and_extensions {
   return $ctl->next;
 }
 
+
+### QUIT command
+sub _exec_quit_command {
+  my ($ctl, $args) = @_;
+  my ($sess) = @$args;
+
+  $sess->clear_transaction;
+  $sess->ok_221_bye_now;
+  $sess->disconnect;
+  
+  return $ctl->done;
+}
 
 1;

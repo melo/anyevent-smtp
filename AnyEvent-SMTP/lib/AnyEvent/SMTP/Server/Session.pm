@@ -168,6 +168,13 @@ sub err_501_syntax_error {
   return $_[0]->send('501', $_[1] || 'Syntax error');
 }
 
+sub err_503_bad_sequence_cmds {
+  return $_[0]->send('503', $_[1] || 'Bad sequence of commands');
+}
+
+sub err_553_action_not_taken_mbox_not_allowed {
+  return $_[0]->send('553', $_[1] || 'Action not taken: mailbox name not allowed');
+}
 
 ##################
 # Internal methods

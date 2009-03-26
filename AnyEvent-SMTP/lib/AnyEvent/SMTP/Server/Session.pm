@@ -308,9 +308,9 @@ sub _parse_command {
         
         # Proably a better code here
         $self->err_501_syntax_error('Unhandled command');
-      })
-    });
-  });
+      }); # chain execute_CMD_command
+    }); # chain validate_CMD_command
+  }); # chain parse_CMD_command
 
   return;
 }

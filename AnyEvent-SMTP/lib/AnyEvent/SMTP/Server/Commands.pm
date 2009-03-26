@@ -30,6 +30,10 @@ sub start {
   $self->hook('validate_mail_command', \&_validate_mail_command);
   $self->hook('execute_mail_command',  \&_exec_mail_command    );
   
+  $self->hook('parse_rcpt_command',    \&_parse_rcpt_command   );
+  $self->hook('validate_rcpt_command', \&_validate_rcpt_command);
+  $self->hook('execute_rcpt_command',  \&_exec_rcpt_command    );
+  
   return;
 }
 
@@ -104,32 +108,7 @@ sub _parse_mail_command {
     return $ctl->done;
   }
   
-  # Mark $rest as parsed, we'll take care of the rest now
-  my ($addr, @exts) = split_smtp_cmd_args($rest);
-  $args->[2] = '';
-  
-  # parse and validate reverse-path, store it in request args
-  $addr = parse_smtp_cmd_mail_addr($addr);
-  if (!defined $addr) {
-    $sess->err_501_syntax_error('Missing reverse-path after FROM:');
-    return $ctl->done;
-  }
-  push @{$req->args}, $addr;
-  
-  # Parse extenions and store them in our request
-  my $exts = parse_smtp_cmd_extensions(@exts);
-  if (!$exts) {
-    $sess->err_501_syntax_error("Unable to parse '".join(' ', @exts)."'");
-    return $ctl->done;
-  }
-  elsif (%$exts) {
-    %{$req->extensions} = %$exts;
-  }
-  else {
-    # nothing to do, no extensions detected
-  }
-  
-  return $ctl->next;
+  return _parse_address_and_extensions($ctl, $args, $sess, $req, $rest);
 }
 
 sub _validate_mail_command {
@@ -156,6 +135,98 @@ sub _exec_mail_command {
   
   $sess->ok_250;
   return $ctl->done;
+}
+
+
+### RCPT TO:<address> (EXT(=VALUE)?)*
+sub _parse_rcpt_command {
+  my ($ctl, $args) = @_;
+  my ($sess, $req, $rest) = @$args;
+
+  # Make sure we have our mandatory first argument  
+  unless ($rest =~ s/^to:\s*//i) {
+    $sess->err_501_syntax_error("Missing 'TO:' argument");
+    return $ctl->done;
+  }
+  
+  return _parse_address_and_extensions($ctl, $args, $sess, $req, $rest);
+}
+
+sub _validate_rcpt_command {
+  my ($ctl, $args) = @_;
+  my ($sess, $req) = @$args;
+  
+  # No MAIL FROM:, bad sequence: cf rfc5321, seq 3.3, para 10
+  # 
+  #   If a RCPT command appears without a previous MAIL command, the
+  #   server MUST return a 503 "Bad sequence of commands" response
+  # 
+  if (! $sess->has_transaction) {
+    $sess->err_503_bad_sequence_cmds;
+    return $ctl->done;
+  }
+  
+  $ctl->next;
+}
+
+sub _exec_rcpt_command {
+  my ($ctl, $args) = @_;
+
+  $args->[0]->call('check_rcpt_address', $args, sub {
+    my (undef, $args, $is_ok) = @_;
+    my ($sess, $req) = @$args;
+
+    if ($is_ok) {
+      # Store the forward path on our transaction
+      my $fwd_path = $sess->path_class->new({
+        addr       => $req->args->[0],
+        extensions => $req->extensions,
+      });
+      my $rcpts = $sess->transaction->forward_paths;
+      push @$rcpts, $fwd_path;
+      
+      $sess->ok_250;
+    }
+    else {
+      $sess->err_553_action_not_taken_mbox_not_allowed;
+    }   
+    
+    return $ctl->done;
+  });
+}
+
+
+### Shared parser (MAIL and RCPT) for address and extensions
+
+sub _parse_address_and_extensions {
+  my ($ctl, $args, $sess, $req, $rest) = @_;
+  
+  # Mark $rest as parsed, we'll take care of the rest now
+  my ($addr, @exts) = split_smtp_cmd_args($rest);
+  $args->[2] = '';
+  
+  # parse and validate reverse-path, store it in request args
+  $addr = parse_smtp_cmd_mail_addr($addr);
+  if (!defined $addr) {
+    $sess->err_501_syntax_error('Missing address');
+    return $ctl->done;
+  }
+  push @{$req->args}, $addr;
+  
+  # Parse extenions and store them in our request
+  my $exts = parse_smtp_cmd_extensions(@exts);
+  if (!$exts) {
+    $sess->err_501_syntax_error("Unable to parse '".join(' ', @exts)."'");
+    return $ctl->done;
+  }
+  elsif (%$exts) {
+    %{$req->extensions} = %$exts;
+  }
+  else {
+    # nothing to do, no extensions detected
+  }
+  
+  return $ctl->next;
 }
 
 

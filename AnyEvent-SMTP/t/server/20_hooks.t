@@ -82,6 +82,31 @@ $srv->hook('validate_mail_command', sub {
 });
 
 
+### Support two RCPT TO extensions, NICEEEE
+$srv->hook('validate_rcpt_command', sub {
+  my ($ctl, $args) = @_;
+  my ($sess, $req) = @$args;
+  
+  $req->ack_extensions(qw( NICEEEE GOOOD ));
+  
+  return $ctl->next;
+});
+
+
+### Support RCPT checks for domains
+
+$srv->hook('check_rcpt_address', sub {
+  my ($ctl, $args) = @_;
+  my ($sess, $req) = @$args;
+  my $addr = $req->args->[0];
+  
+  # Accept only mails from cool.domain domain
+  return $ctl->done if $addr && $addr =~ m/\@cool.domain$/;
+  
+  return $ctl->next;
+});
+
+
 ### Our test cases
 my @htcs = (
   ### IGNORE - test line_in stuff
@@ -139,7 +164,7 @@ my @htcs = (
   {
     test => 'tc-6',
     item => 'helo domain.me wtf',
-    buffer => "501 arguments after host 'domain.me' not permitted\r\n",
+    buffer => "250 example.com Welcome, domain.me\r\n",
   },
   
   {
@@ -162,7 +187,7 @@ my @htcs = (
   {
     test => 'tc-9',
     item => 'ehlo domain.me wtf',
-    buffer => "501 arguments after host 'domain.me' not permitted\r\n",
+    buffer => "250-example.com Welcome, domain.me\r\n250 8BITMIME\r\n",
   },
   
   {
@@ -185,7 +210,7 @@ my @htcs = (
   {
     test => 'tc-12',
     item => 'mail from:',
-    buffer => "501 Missing reverse-path after FROM:\r\n",
+    buffer => "501 Missing address\r\n",
   },
   
   {
@@ -275,9 +300,125 @@ my @htcs = (
       });
     },
   },
+  
+  ### RCPT
+  {
+    test => 'tc-22',
+    item => ['mail from:<>', 'rcpt'],
+    buffer => "250 ok\r\n501 Missing 'TO:' argument\r\n",
+  },
+  
+  {
+    test => 'tc-23',
+    item => ['mail from:<>', 'rcpt to:'],
+    buffer => "250 ok\r\n501 Missing address\r\n",
+  },
+  
+  {
+    test => 'tc-24',
+    item => ['mail from:<>', 'rcpt to:<xpto@cool.domain> ='],
+    buffer => "250 ok\r\n501 Unable to parse '='\r\n",
+  },
+  
+  {
+    test => 'tc-25',
+    item => ['mail from:<>', 'rcpt to:<xpto@cool.domain> BODY=8BITMIME'],
+    buffer => "250 ok\r\n501 Unrecognized extension 'BODY'\r\n",
+  },
+  
+  {
+    test => 'tc-26',
+    item => ['mail from:<>', 'rcpt to:<xpto@cool.domain>'],
+    buffer => "250 ok\r\n250 ok\r\n",
+    tests => sub {
+      my $r = $sess->transaction->forward_paths;
+      is($r->[0]->addr, 'xpto@cool.domain');
+      cmp_deeply($r->[0]->extensions, {});
+    },
+  },
+  
+  {
+    # FIXME: a reverse path is mandatory!
+    test => 'tc-27',
+    item => ['mail from:<>', 'rcpt to:<>'],
+    buffer => "250 ok\r\n553 Action not taken: mailbox name not allowed\r\n",
+    tests => sub {
+      my $r = $sess->transaction->forward_paths;
+      is(scalar(@$r), 0);
+    },
+  },
+  
+  {
+    test => 'tc-28',
+    item => ['mail from:<>', 'rcpt to:<x@cool.domain>'],
+    buffer => "250 ok\r\n250 ok\r\n",
+    tests => sub {
+      my $r = $sess->transaction->forward_paths;
+      is($r->[0]->addr, 'x@cool.domain');
+      cmp_deeply($r->[0]->extensions, {});
+    },
+  },
+  
+  {
+    test => 'tc-29',
+    item => ['mail from:<>', 'rcpt to: <x@cool.domain>'],
+    buffer => "250 ok\r\n250 ok\r\n",
+    tests => sub {
+      my $r = $sess->transaction->forward_paths;
+      is($r->[0]->addr, 'x@cool.domain');
+      cmp_deeply($r->[0]->extensions, {});
+    },
+  },
+  
+  {
+    test => 'tc-30',
+    item => ['mail from:<>', 'rcpt to:x@cool.domain'],
+    buffer => "250 ok\r\n250 ok\r\n",
+    tests => sub {
+      my $r = $sess->transaction->forward_paths;
+      is($r->[0]->addr, 'x@cool.domain');
+      cmp_deeply($r->[0]->extensions, {});
+    },
+  },
+  
+  {
+    test => 'tc-31',
+    item => ['mail from:<>', 'rcpt to: x@cool.domain'],
+    buffer => "250 ok\r\n250 ok\r\n",
+    tests => sub {
+      my $r = $sess->transaction->forward_paths;
+      is($r->[0]->addr, 'x@cool.domain');
+      cmp_deeply($r->[0]->extensions, {});
+    },
+  },
+  
+  {
+    test => 'tc-32',
+    item => ['mail from:<>', 'rcpt to:<xpto@cool.domain> GOOOD=me NICEEEE '],
+    buffer => "250 ok\r\n250 ok\r\n",
+    tests => sub {
+      my $r = $sess->transaction->forward_paths;
+      is($r->[0]->addr, 'xpto@cool.domain');
+      cmp_deeply($r->[0]->extensions, {
+        'NICEEEE' => undef,
+        'GOOOD'   => 'me'
+      });
+    },
+  },
+  
+  {
+    test => 'tc-33',
+    item => ['mail from:<>', 'rcpt to:<xpto@no.domain> GOOOD=me NICEEEE '],
+    buffer => "250 ok\r\n553 Action not taken: mailbox name not allowed\r\n",
+    tests => sub {
+      my $r = $sess->transaction->forward_paths;
+      is(scalar(@$r), 0);
+    },
+  },
 );
 
 foreach my $tc (@htcs) {
+  $sess->clear_transaction;
   $handle->reset_write_buffer;
   %called = ();
   $handle->push_item($tc->{item});
@@ -289,8 +430,8 @@ foreach my $tc (@htcs) {
     );
   }
 
-  if (exists $tc->{buffer}) { is($handle->write_buffer, $tc->{buffer}) }
-  else                      { is($handle->write_buffer, "250 ok\r\n")  }
+  is($handle->write_buffer, $tc->{buffer}, "correct output [$tc->{test}]")
+    if exists $tc->{buffer};
 
-  $tc->{tests}->() if exists $tc->{tests};
+  $tc->{tests}->($tc->{test}) if exists $tc->{tests};
 }

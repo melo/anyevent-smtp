@@ -13,5 +13,11 @@ has reverse_path => (
   is  => 'rw',
 );
 
+has forward_paths => (
+  isa => 'ArrayRef',
+  is  => 'ro',
+  default => sub { [] },
+);
+
 no Mouse;
 __PACKAGE__->meta->make_immutable;

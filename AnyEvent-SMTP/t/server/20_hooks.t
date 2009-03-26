@@ -444,6 +444,19 @@ my @htcs = (
     item => 'noop',
     buffer => "250 ok\r\n",
   },
+  
+  ### RSET
+  {
+    test => 'tc-38',
+    item => 'rset yeah',
+    buffer => "501 Unrecognized arguments 'yeah'\r\n",
+  },
+  
+  {
+    test => 'tc-39',
+    item => 'rset',
+    buffer => "250 ok\r\n",
+  },
 );
 
 foreach my $tc (@htcs) {

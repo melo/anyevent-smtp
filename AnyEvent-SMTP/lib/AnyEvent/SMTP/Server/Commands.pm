@@ -37,6 +37,8 @@ sub start {
   $self->hook('parse_noop_command',   \&_parse_noop_command);
   $self->hook('execute_noop_command', \&_exec_noop_command );
   
+  $self->hook('execute_rset_command', \&_exec_rset_command );
+  
   $self->hook('execute_quit_command', \&_exec_quit_command);
   
   return;
@@ -251,6 +253,18 @@ sub _exec_noop_command {
   my ($ctl, $args) = @_;
   my ($sess) = @$args;
 
+  $sess->ok_250;
+  
+  return $ctl->done;
+}
+
+
+### RSET command
+sub _exec_rset_command {
+  my ($ctl, $args) = @_;
+  my ($sess) = @$args;
+
+  $sess->clear_transaction;
   $sess->ok_250;
   
   return $ctl->done;
